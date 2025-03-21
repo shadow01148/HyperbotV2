@@ -1,0 +1,81 @@
+{
+    "Aeronautical Engineer": {
+        "ranks": {
+            "I": { "minBlocks": 200 },
+            "II": { "minBlocks": 400 },
+            "III": { "minBlocks": 800 },
+            "IV": { "minBlocks": 1200 },
+            "V": { "minBlocks": 2000, "minScore": 60 },
+            "X": { "minBlocks": 4000, "hallOfFame": true }
+        }
+    },
+    "VTOL Engineer": {
+        "ranks": {
+            "I": { "minBlocks": 200 },
+            "II": { "minBlocks": 400 },
+            "III": { "minBlocks": 800 },
+            "IV": { "minBlocks": 1200 },
+            "V": { "minBlocks": 2000, "minScore": 60 },
+            "X": { "minBlocks": 4000, "hallOfFame": true }
+        }
+    },
+    "Rocket Scientist": {
+        "ranks": {
+            "I": { "minBlocks": 200 },
+            "II": { "minBlocks": 400 },
+            "III": { "minBlocks": 800 },
+            "IV": { "minBlocks": 1200 },
+            "V": { "minBlocks": 2000, "minScore": 60 },
+            "X": { "minBlocks": 4000, "hallOfFame": true }
+        }
+    },
+    "Robotic Specialist": {
+        "ranks": {
+            "I": { "minBlocks": 100 },
+            "II": { "minBlocks": 200 },
+            "III": { "minBlocks": 400 },
+            "IV": { "minBlocks": 800 },
+            "V": { "minBlocks": 1400, "minScore": 60 },
+            "X": { "minBlocks": 2000, "hallOfFame": true }
+        }
+    },
+    "Terrain Specialist": {
+        "ranks": {
+            "I": { "minBlocks": 400 },
+            "II": { "minBlocks": 800 },
+            "III": { "minBlocks": 1200 },
+            "IV": { "minBlocks": 1800 },
+            "V": { "minBlocks": 3000, "minScore": 60 },
+            "X": { "minBlocks": 4500, "hallOfFame": true }
+        }
+    },
+    "Shipwright": {
+        "ranks": {
+            "I": { "minBlocks": 500 },
+            "II": { "minBlocks": 1000 },
+            "III": { "minBlocks": 1500 },
+            "IV": { "minBlocks": 2000 },
+            "V": { "minBlocks": 4000, "minScore": 60 },
+            "X": { "minBlocks": 6000, "hallOfFame": true }
+        }
+    },
+    "Architect": {
+        "ranks": {
+            "I": { "minBlocks": 200 },
+            "II": { "minBlocks": 600 },
+            "III": { "minBlocks": 1200 },
+            "IV": { "minBlocks": 2000 },
+            "V": { "minBlocks": 3000, "minScore": 60 },
+            "X": { "minBlocks": 4000, "hallOfFame": true }
+        }
+    },
+    "Designer": {
+        "ranks": {
+            "I": { "minScore": 20 },
+            "II": { "minScore": 35 },
+            "III": { "minScore": 50 },
+            "IV": { "minScore": 70 },
+            "V": { "minScore": 130 }
+        }
+    }
+}
