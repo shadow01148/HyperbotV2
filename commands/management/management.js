@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 //@ts-check
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
 const noblox = require('noblox.js');
@@ -13,6 +13,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('manage')
         .setDescription('Management commands')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addSubcommandGroup(group =>
             group
                 .setName('rankrequest')

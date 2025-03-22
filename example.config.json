@@ -12,5 +12,6 @@
       "expertLink2": "your-expert-link-2-goes-here"
     },
     "ticketCount": 0,
-    "ticketCategoryId": "TICKET_CATEGORY_ID"
+    "ticketCategoryId": "TICKET_CATEGORY_ID",
+    "blacklistedIds": []
   }

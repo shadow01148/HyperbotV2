@@ -1,9 +1,11 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('unde')
         .setDescription('Unde commands.')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+
         .addSubcommand(subcommand =>
             subcommand.setName('add')
                 .setDescription('Add a user')
