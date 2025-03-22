@@ -1,31 +1,15 @@
 /* eslint-disable no-undef */
-const { Client, Events, GatewayIntentBits, Collection, MessageFlags, EmbedBuilder } = require('discord.js');
+const { Client, Events, GatewayIntentBits, Collection, MessageFlags } = require('discord.js');
 const { REST, Routes } = require('discord.js');
-var { token, ticketCategoryId, ticketCount, mongoDBConnection } = require('./config.json');
+var { token, mongoDBConnection } = require('./config.json');
 const fs = require('node:fs').promises;
 const path = require('node:path');
 const { MongoClient } = require('mongodb');
 const noblox = require('noblox.js');
-const ticketsFilePath = "ticketsData.json"; // Adjust the path if needed
 
 
 
 const mongoClient = new MongoClient(mongoDBConnection, {});
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function connectDB() {
-    try {
-        await mongoClient.connect();
-        console.log('Connected to MongoDB');
-    } catch (error) {
-        console.error('MongoDB connection error:', error);
-    }
-}
-
-connectDB();
 
 const client = new Client({ intents: [ 
     GatewayIntentBits.DirectMessages,
@@ -36,29 +20,6 @@ const client = new Client({ intents: [
     GatewayIntentBits.GuildMembers
 ] });
 client.commands = new Collection();
-
-function getEligibleRanks(ticketData, rankRequirements) {
-    const eligibleRanks = {};
-    const totalScore = (ticketData.upvoteCount - ticketData.downvoteCount) - 2;
-
-    for (const [category, requirements] of Object.entries(rankRequirements)) {
-        const ranks = [];
-        for (const [rank, criteria] of Object.entries(requirements.ranks)) {
-            const meetsBlockCount = !criteria.minBlocks || ticketData.blockCount >= criteria.minBlocks;
-            const meetsScore = !criteria.minScore || totalScore >= criteria.minScore;
-            const meetsHallOfFame = !criteria.hallOfFame || totalScore >= 150; // Hall of Fame requires 150+ score
-
-            if (meetsBlockCount && meetsScore && meetsHallOfFame) {
-                ranks.push(rank);
-            }
-        }
-        if (ranks.length > 0) {
-            eligibleRanks[category] = ranks;
-        }
-    }
-
-    return eligibleRanks;
-}
 
 // Load commands
 const commands = [];
@@ -104,164 +65,6 @@ client.once(Events.ClientReady, async (readyClient) => {
         console.error(error);
     }
 });
-
-client.on(Events.MessageCreate, async (message) => {
-    if (message.author.bot) {
-        return;
-    }
-
-    // Check if the message is in the correct ticket category
-    if (message.channel.parentId !== ticketCategoryId) {
-        return;
-    }
-
-    try {
-        const data = await fs.readFile('ticketsData.json', 'utf8');
-        const ticketData2 = JSON.parse(data);
-        const channelNumber = message.channel.name.match(/\d+/)[0];
-    
-        if (ticketData2[channelNumber]) {
-            const { rank, blockCount, upvoteCount, downvoteCount } = ticketData2[channelNumber];
-    
-            // If all fields are filled (not null), return
-            if (rank !== null && blockCount !== null && upvoteCount !== null && downvoteCount !== null) {
-                return;
-            }
-        }
-    } catch (error) {
-        console.error("Error reading or parsing file:", error);
-    }
-    
-
-    // Split the message content into lines
-    const lines = message.content.split('\n');
-
-    // Initialize an object to store the extracted values
-    const ticketData = {
-        channelId: message.channel.id,
-        authorId: message.author.id,
-        ranks: null,
-        blockCount: null,
-        upvoteCount: null,
-        downvoteCount: null,
-    };
-
-    // Load rank requirements from ranks.json
-    const ranksFilePath = path.join(__dirname, 'ranks.json'); // Adjust the path as needed
-    const rankRequirements = JSON.parse(await fs.readFile(ranksFilePath, 'utf8'));
-
-    // Define a threshold for what constitutes a "wall of text"
-    const MAX_LINES = 20;
-
-    if (lines.length > MAX_LINES) {
-        await message.reply("Wall of text detected.");
-        await sleep(3000);
-        await message.channel.delete();
-        return;
-    } else {
-        // Process the ticket data as usual
-        for (const line of lines) {
-            if (line.startsWith('- Rank(s) to be requested (separate with commas):')) {
-                ticketData.rank = line.split(':')[1].trim().split(',').map(rank => rank.trim());            
-            } else if (line.startsWith('- Block Count:')) {
-                let value = line.split(':')[1].trim();
-                ticketData.blockCount = Number(value);
-            } else if (line.startsWith('- Upvote Count (as is):')) {
-                let value = line.split(':')[1].trim();
-                ticketData.upvoteCount = Number(value);
-            } else if (line.startsWith('- Downvote Count (as is):')) {
-                let value = line.split(':')[1].trim();
-                ticketData.downvoteCount = Number(value);
-            }
-        }
-    }
-    
-    // Check if all required fields were extracted
-    if (!ticketData.rank || !ticketData.blockCount || !ticketData.upvoteCount || !ticketData.downvoteCount) {
-        await message.reply('Invalid message format. Make sure that you filled out all fields correctly.');
-        return;
-    }
-
-    // Check if blockCount exceeds 20,000
-    if (ticketData.blockCount > 20000) {
-        await message.reply('Invalid block count. Block count cannot exceed 20,000.');
-        return;
-    }
-
-    // Check if upvoteCount or downvoteCount exceeds 2,000
-    if (ticketData.upvoteCount > 2000 || ticketData.downvoteCount > 2000) {
-        await message.reply('Invalid vote count. Upvotes and downvotes cannot exceed 2,000.');
-        return;
-    }
-
-    const eligibleRanks = getEligibleRanks(ticketData, rankRequirements);
-    const eligibleRanksText = Object.entries(eligibleRanks)
-        .map(([category, ranks]) => `**${category}**: ${ranks.join(', ')}`)
-        .join('\n');
-
-        const embed = new EmbedBuilder()
-        .setTitle('📝 Rank Request')
-        .addFields(
-            { 
-                name: '🔹 Rank(s) requesting for', 
-                value: ticketData.rank.length > 0 ? ticketData.rank.map(rank => `- ${rank}`).join('\n') : "❌ No ranks specified.", 
-                inline: false 
-            },
-            { name: '🔨 Block Count', value: ticketData.blockCount.toLocaleString(), inline: false },
-            { name: '👍 Upvotes', value: ticketData.upvoteCount.toLocaleString(), inline: false },
-            { name: '👎 Downvotes', value: ticketData.downvoteCount.toLocaleString(), inline: false },
-            { name: '🏅 Eligible Ranks', value: eligibleRanksText, inline: false },
-            { name: 'Overall, Subtracted Votes', value: ((ticketData.upvoteCount - ticketData.downvoteCount) - 2).toLocaleString(), inline: false }
-        )
-        
-        .setColor(0x00AE86); // You can change the color to whatever you prefer
-
-    // Write the ticket data to ticketsData.json
-    await writeTicketDataToFile(ticketData);
-    await message.reply({embeds: [embed]})
-
-    // Optional: Notify that no further messages will be processed in this channel
-    await message.channel.send('Please wait for further manual verification. They will be with you shortly.');
-});
-
-async function writeTicketDataToFile(ticketData) {
-    try {
-        let existingData = {};
-        // Read existing data from the tickets file
-        try {
-            const fileData = await fs.readFile(ticketsFilePath, "utf-8");
-            existingData = JSON.parse(fileData);
-        } catch {
-            console.log("Creating new ticketsData.json file.");
-        }
-
-        // Read and update only ticketCount in config file
-        try {
-            const configData = await fs.readFile("./config.json", "utf-8");
-            const configJson = JSON.parse(configData);
-            ticketCount = configJson.ticketCount || 1;
-            configJson.ticketCount = ticketCount + 1;
-
-            // Write only the modified ticketCount back
-            await fs.writeFile("./config.json", JSON.stringify({ ...configJson, ticketCount: configJson.ticketCount }, null, 2));
-        } catch {
-            console.log("Config file not found, initializing ticketCount.");
-            ticketCount = 1;
-            await fs.writeFile("./config.json", JSON.stringify({ ticketCount: 2 }, null, 2));
-        }
-
-        // Add the new ticket data with the updated count
-        existingData[ticketCount] = ticketData;
-
-        // Write the updated data back to the file
-        await fs.writeFile(ticketsFilePath, JSON.stringify(existingData, null, 2));
-
-        console.log(`Ticket #${ticketCount} has been added to ticketsData.json`);
-    } catch (error) {
-        console.error("Error writing ticket data to file:", error);
-    }
-}
-
 
 client.on(Events.GuildMemberRemove, async (member) => {
     try {
