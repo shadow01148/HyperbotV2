@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 //@ts-check
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const noblox = require('noblox.js');
 const { mongoDBConnection } = require('../../config.json');
@@ -35,6 +35,15 @@ module.exports = {
                                 .setName("user")
                         )
                 )
+                .addSubcommand(subcommand =>
+                    subcommand
+                        .setName("blacklist")
+                        .setDescription("Blacklists a user from verifying, and deletes their entry in the database if it exists.")
+                        .addUserOption(user =>
+                            user 
+                                .setName("user")
+                        )
+                )
         ),
 
     /**
@@ -44,41 +53,67 @@ module.exports = {
         const subcommandGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
 
-        if (subcommandGroup === 'ticket' && subcommand === 'list') {
-            await client.connect();
-            const database = client.db('HyperVerify');
-            const collection = database.collection('verifiedUsers');
-        
-            const targetUser = interaction.options.getUser("user") || interaction.user;
-            const discordId = targetUser.id;
-        
-            const userData = await collection.findOne({ _id: discordId });
+        if (subcommandGroup === 'verify') {
+            if (subcommand === 'check') {
+                await client.connect();
+                const database = client.db('HyperVerify');
+                const collection = database.collection('verifiedUsers');
+            
+                const targetUser = interaction.options.getUser("user") || interaction.user;
+                const discordId = targetUser.id;
+            
+                const userData = await collection.findOne({ _id: discordId });
 
-            if (!userData) {
-                await interaction.reply({content: "No user found in the database."})
-                return;
+                if (!userData) {
+                    await interaction.reply({content: "No user found in the database."})
+                    return;
+                }
+                const user = await noblox.getUserInfo(userData['robloxId'])
+                const createdDate = new Date(user.created);
+                const accountAge = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+                const embed = new EmbedBuilder()
+                .setTitle("✅ Verification Status")
+                .addFields(
+                    { name: "👤 Username", value: user.name, inline: true },
+                    { name: "📅 Account Age", value: `${accountAge} days`, inline: true },
+                )
+                .setColor("Green")
+                .setThumbnail(`https://www.roblox.com/headshot-thumbnail/image?userId=${userData['robloxId']}&width=420&height=420&format=png`)
+                .setTimestamp();
+            
+                await interaction.reply({ embeds: [embed], ephemeral: true });
+                return
+            } 
+            if (subcommand === "blacklist") {
+                await client.connect();
+                const database = client.db('HyperVerify');
+                const collection = database.collection('verifiedUsers');
+            
+                const targetUser = interaction.options.getUser("user") || interaction.user;
+                const discordId = targetUser.id;
+
+                const userData = await collection.findOne({ _id: discordId });
+
+                if (userData) {
+                    await collection.deleteOne({ _id: discordId });
+                }
+
+                const configPath = path.join(__dirname, '../../config.json');
+                const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+
+                if (!config.blacklistedIds.includes(discordId)) {
+                    config.blacklistedIds.push(discordId);
+                    await fs.writeFile(configPath, JSON.stringify(config, null, 4));
+                    await interaction.reply({ content: `✅ User <@${discordId}> has been blacklisted from verifying.`, ephemeral: true });
+                } else {
+                    await interaction.reply({ content: "❌ This user is already blacklisted.", ephemeral: true });
+                }
             }
-            const user = await noblox.getUserInfo(userData['robloxId'])
-            const createdDate = new Date(user.created);
-            const accountAge = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-            const embed = new EmbedBuilder()
-            .setTitle("✅ Verification Status")
-            .addFields(
-                { name: "👤 Username", value: user.name, inline: true },
-                { name: "📅 Account Age", value: `${accountAge} days`, inline: true },
-            )
-            .setColor("Green")
-            .setThumbnail(`https://www.roblox.com/headshot-thumbnail/image?userId=${userData['robloxId']}&width=420&height=420&format=png`)
-            .setTimestamp();
-        
-            await interaction.reply({ embeds: [embed], ephemeral: true });
-            return
-        } 
-        
+        }
         if (subcommandGroup === 'ticket' && subcommand === 'list') {    
             const ticketsDataPath = path.join(__dirname, '..', '..', 'ticketsData.json'); // Adjust as needed
-            const ticketsData = JSON.parse(fs.readFileSync(ticketsDataPath, 'utf8'));
+            const ticketsData = JSON.parse(await fs.readFile(ticketsDataPath, 'utf8'));
             const ticketEntries = Object.entries(ticketsData);
 
             if (ticketEntries.length === 0) {

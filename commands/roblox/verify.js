@@ -1,7 +1,10 @@
+/* eslint-disable no-undef */
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
 const { verifyRole, mongoDBConnection, ROBLOSECURITY } = require('../../config.json');
 const { MongoClient } = require('mongodb');
 const noblox = require('noblox.js');
+const fs = require('fs').promises;
+const path = require('path');
 
 const client = new MongoClient(mongoDBConnection, {});
 
@@ -40,13 +43,22 @@ module.exports = {
         const collection = database.collection('verifiedUsers');
         const username = interaction.options.getString('username');
 
-        var message = await interaction.reply({ content: 'Hold tight...'});
+        var message = await interaction.reply({ content: 'Hold Tight!'});
         
         /** @type {number} The Roblox user ID */
         const id = await noblox.getIdFromUsername(username);
         
         /** @type {string} The Discord user ID */
         const discordId = interaction.user.id;
+
+        const configPath = path.join(__dirname, '../../config.json');
+        const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+
+        if (config.blacklistedIds.includes(discordId)) {
+            await interaction.reply({ content: "❌ This user is blacklisted from verification.", ephemeral: true });
+            return;
+        }
+
 
         const user = await collection.findOne({ _id: discordId });
         const ranks = user?.roles || [];
