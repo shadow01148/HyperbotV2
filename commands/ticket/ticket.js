@@ -48,11 +48,10 @@ async function createTicket(interaction) {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('ticket')
-        .setDescription('The ticket system.')
+        .setName('rank')
         .addSubcommand(subcommand =>
-            subcommand.setName('open')
-                .setDescription('Create a ticket.')
+            subcommand.setName('request')
+                .setDescription('Create a rank request.')
                 .addStringOption(option =>
                     option.setName('rank')
                         .setDescription('The rank to be requested. Separate with commas if you want multiple ranks.')

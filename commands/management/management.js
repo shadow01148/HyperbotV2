@@ -10,12 +10,12 @@ module.exports = {
         .setDescription('Management commands')
         .addSubcommandGroup(group =>
             group
-                .setName('ticket')
-                .setDescription('Ticket management commands')
+                .setName('rankrequest')
+                .setDescription('Rank Requests commands')
                 .addSubcommand(subcommand =>
                     subcommand
                         .setName('list')
-                        .setDescription('Lists tickets')
+                        .setDescription('Lists rank request tickets')
                 )
         ),
     /**
