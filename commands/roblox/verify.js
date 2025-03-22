@@ -87,7 +87,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle('HyperVerify Rewrite Request')
-            .setDescription(`Please enter the following code in your Roblox profile's description:\n # \`${verificationCode}\` \n\nOnce you have done this, click the button below.`)
+            .setDescription(`Please enter the following code in your Roblox profile's description:\n \`${verificationCode}\` \n\nOnce you have done this, click the button below.`)
             .setColor('Blurple')
             .setTimestamp();
         
