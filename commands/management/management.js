@@ -4,7 +4,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const fs = require('fs').promises;
 const path = require('path');
 const noblox = require('noblox.js');
-const { mongoDBConnection } = require('../../config.json');
+const { mongoDBConnection, verifyRole } = require('../../config.json');
 const { MongoClient } = require('mongodb');
 
 const client = new MongoClient(mongoDBConnection, {});
@@ -42,12 +42,30 @@ module.exports = {
                         .addUserOption(user =>
                             user 
                                 .setName("user")
+                                .setRequired(true)
                         )
+                )
+                .addSubcommand(subcommand =>
+                    subcommand
+                    .setName("manual")
+                    .setDescription("Manually verifies a user.")
+                    .addUserOption(user =>
+                        user 
+                            .setName("user")
+                            .setRequired(true)
+                    )
+                    .addStringOption(user =>
+                        user
+                            .setName("id")
+                            .setDescription("Specify a roblox ID to allocate the user to.")
+                    )
                 )
         ),
 
+
+
     /**
-     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; }; user: { id: any; }; reply: (arg0: { content?: string; ephemeral?: boolean; embeds?: EmbedBuilder[]; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; editReply: (arg0: { components: never[]; }) => any; }} interaction
+     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; getString: (arg0: string) => any; }; user: { id: any; }; reply: (arg0: { content?: string; embeds?: EmbedBuilder[]; ephemeral?: boolean; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; member: { roles: { add: (arg0: string) => Promise<any>; }; setNickname: (arg0: any) => any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
      */
     async execute(interaction) {
         const subcommandGroup = interaction.options.getSubcommandGroup();
@@ -90,7 +108,7 @@ module.exports = {
                 const database = client.db('HyperVerify');
                 const collection = database.collection('verifiedUsers');
             
-                const targetUser = interaction.options.getUser("user") || interaction.user;
+                const targetUser = interaction.options.getUser("user");
                 const discordId = targetUser.id;
 
                 const userData = await collection.findOne({ _id: discordId });
@@ -110,8 +128,30 @@ module.exports = {
                     await interaction.reply({ content: "❌ This user is already blacklisted.", ephemeral: true });
                 }
             }
+            if (subcommand === "manual") {
+                await client.connect();
+                const database = client.db('HyperVerify');
+                const collection = database.collection('verifiedUsers');
+            
+                const targetUser = interaction.options.getUser("user");
+                const targetRobloxId = Number(interaction.options.getString("id"))
+                const discordId = targetUser.id;
+
+                const userData = await collection.findOne({ _id: discordId });
+                const user = await noblox.getUserInfo(targetRobloxId)
+
+                if (userData) {
+                    await interaction.reply({content: "The user you have applied is already verified."})
+                    return;
+                }
+                await interaction.member.roles.add(verifyRole).catch(console.error);
+                await interaction.member.setNickname(user.name)
+                await collection.insertOne({_id: discordId, robloxId: user.id, ranks: []})
+                await interaction.reply({content: "User successfully added to the database."})
+
+            }
         }
-        if (subcommandGroup === 'ticket' && subcommand === 'list') {    
+        if (subcommandGroup === 'rankrequest' && subcommand === 'list') {    
             const ticketsDataPath = path.join(__dirname, '..', '..', 'ticketsData.json'); // Adjust as needed
             const ticketsData = JSON.parse(await fs.readFile(ticketsDataPath, 'utf8'));
             const ticketEntries = Object.entries(ticketsData);
