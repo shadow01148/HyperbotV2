@@ -5,12 +5,20 @@
         "target": "ES2022",
         "jsx": "react",
         "allowImportingTsExtensions": true,
+        "strict": true,
         "strictNullChecks": true,
+        "noImplicitAny": true,
         "strictFunctionTypes": true,
-       "noUncheckedIndexedAccess": true,
+        "noUncheckedIndexedAccess": true,
         "exactOptionalPropertyTypes": true,
         "noImplicitOverride": true,
-        "noPropertyAccessFromIndexSignature": true
+        "noPropertyAccessFromIndexSignature": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitThis": true,
+        "useUnknownInCatchVariables": true,
+        "alwaysStrict": true,
+        "forceConsistentCasingInFileNames": true
     },
     "exclude": [
         "node_modules",

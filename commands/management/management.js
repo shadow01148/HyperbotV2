@@ -18,6 +18,9 @@ module.exports = {
                         .setDescription('Lists tickets')
                 )
         ),
+    /**
+     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; }; reply: (arg0: { content?: string; ephemeral?: boolean; embeds?: EmbedBuilder[]; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; user: { id: any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
+     */
     async execute(interaction) {
         const subcommandGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
@@ -35,6 +38,9 @@ module.exports = {
             let currentPage = 0;
             const totalPages = Math.ceil(ticketEntries.length / ticketsPerPage);
 
+            /**
+             * @param {number} page
+             */
             function generateEmbed(page) {
                 const start = page * ticketsPerPage;
                 const end = start + ticketsPerPage;
@@ -77,7 +83,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join('\n- ')}` : "❌ No d
 
             const collector = message.createMessageComponentCollector({ time: 60000 });
 
-            collector.on('collect', async (buttonInteraction) => {
+            collector.on('collect', async (/** @type {{ user: { id: any; }; reply: (arg0: { content: string; ephemeral: boolean; }) => any; customId: string; update: (arg0: { embeds: EmbedBuilder[]; components: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; }) => any; }} */ buttonInteraction) => {
                 if (buttonInteraction.user.id !== interaction.user.id) {
                     return buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", ephemeral: true });
                 }
