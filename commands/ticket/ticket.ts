@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from 'discord.js';
 import { promises as fs } from 'fs';
 import path from 'path';
+import logger from '../../utils/logger';
 
-// eslint-disable-next-line no-undef
 const ticketsDataPath = path.join(__dirname, '../../ticketsData.json');
 
 interface Ticket {
@@ -50,7 +50,7 @@ async function createTicket(interaction: ChatInputCommandInteraction) {
 
         await interaction.reply({content: `Ticket created! Ticket number: ${ticketNumber}`, flags: MessageFlags.Ephemeral });
     } catch (error) {
-        console.error("Error creating ticket:", error);
+        logger.error("Error creating ticket:", error);
         await interaction.reply({content: `An error occurred while creating your ticket.`, flags: MessageFlags.Ephemeral });
     }
 }
@@ -116,7 +116,7 @@ export default {
                 await fs.writeFile(ticketsDataPath, JSON.stringify(ticketData2, null, 2));
                 await interaction.reply({content: `Ticket number ${ticketNumber} closed.`, flags: MessageFlags.Ephemeral });
             } catch (error) {
-                console.error("Error closing ticket:", error);
+                logger.error("Error closing ticket:", error);
                 await interaction.reply({content: `An error occurred while closing the ticket.`, flags: MessageFlags.Ephemeral });
             }
         }

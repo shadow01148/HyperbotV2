@@ -1,7 +1,7 @@
 // refresh vip server links
 import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from 'discord.js';
 import {promises as fs} from 'fs';
-
+import logger from '../../utils/logger';
 
 export default {
     data: new SlashCommandBuilder()
@@ -42,7 +42,7 @@ export default {
             await fs.writeFile('config.json', JSON.stringify(config, null, 2));
             await interaction.reply({ content: `VIP server links refreshed!`, flags: MessageFlags.Ephemeral });
         } catch (error) {
-            console.error("Error refreshing VIP server links:", error);
+            logger.error("Error refreshing VIP server links:", error);
             await interaction.reply({content: `An error occurred while refreshing VIP server links.`, flags: MessageFlags.Ephemeral });
         }
     }

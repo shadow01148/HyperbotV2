@@ -4,6 +4,7 @@ import path from 'path';
 import noblox from 'noblox.js';
 import { MongoClient, ObjectId } from 'mongodb';
 import { mongoDBConnection } from '../../config.json';
+import logger from '../../utils/logger';
 
 const client = new MongoClient(mongoDBConnection, {});
 
@@ -193,8 +194,8 @@ export default {
                 }
                 const member = interaction.guild.members.cache.get(targetUser.id);
                 if (member && verifyRole) {
-                    await member.roles.add(verifyRole).catch(console.error);
-                    await member.setNickname(user.name).catch(console.error);
+                    await member.roles.add(verifyRole).catch(logger.error);
+                    await member.setNickname(user.name).catch(logger.error);
                 }
                 await collection.insertOne({_id: new ObjectId(discordId), robloxId: user.id, ranks: []})
                 await interaction.reply({content: "User successfully added to the database."})

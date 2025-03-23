@@ -4,6 +4,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { MongoClient, ObjectId } from 'mongodb';
 import noblox from 'noblox.js';
+import logger from './utils/logger';
+
+
 
 interface ExtendedClient extends Client {
     commands: Collection<string, any>;
@@ -40,10 +43,9 @@ async function loadCommands() {
 
                 if (command.default?.data && command.default?.execute) {
                     client.commands.set(command.default.data.name, command.default);
-                    console.log(`Command loaded: ${command.default.data.name}`);
                     commands.push(command.default.data.toJSON()); // Add this line to register the command
                 } else {
-                    console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                    logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
                 }
             }
         }
@@ -56,21 +58,19 @@ loadCommands();
 
 
 client.once(Events.ClientReady, async (readyClient) => {
-    console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+    logger.info(`Ready! Logged in as ${readyClient.user.tag}`);
 
     // Register commands after client is ready
     const rest = new REST().setToken(token);
     try {
-        console.log('Started refreshing application (/) commands.');
+        logger.info('Started refreshing application (/) commands.');
 
         await rest.put(
             Routes.applicationCommands(readyClient.user.id),
             { body: commands },
         );
-
-        console.log('Successfully reloaded application (/) commands.');
     } catch (error) {
-        console.error(error);
+        logger.error(error);
     }
 });
 
@@ -86,7 +86,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
 
         // If no roles are left after filtering, skip saving
         if (rolesToSave.length === 0) {
-            console.log(`User ${member.id} (${member.user.tag}) has no roles to save. Skipping role save.`);
+            logger.debug(`User ${member.id} (${member.user.tag}) has no roles to save. Skipping role save.`);
             return;
         }
 
@@ -99,12 +99,12 @@ client.on(Events.GuildMemberRemove, async (member) => {
                 { _id: new ObjectId(member.id) },
                 { $set: { ranks: rolesToSave } },
             );
-            console.log(`Roles saved for user ${member.id} (${member.user.tag}):`, rolesToSave);
+            logger.debug(`Roles saved for user ${member.id} (${member.user.tag}):`, rolesToSave);
         } else {
-            console.log(`User ${member.id} (${member.user.tag}) not found in the database.`);
+            logger.debug(`User ${member.id} (${member.user.tag}) not found in the database.`);
         }
     } catch (error) {
-        console.error('Error handling GuildMemberRemove event:', error);
+        logger.error('Error handling GuildMemberRemove event:', error);
     }
 });
 
@@ -121,27 +121,27 @@ client.on(Events.GuildMemberAdd, async (member) => {
             const verifiedRole = member.guild.roles.cache.find(role => role.name === 'Verified');
             if (verifiedRole) {
                 await member.roles.add(verifiedRole);
-                console.log(`Assigned "verified" role to user ${member.id} (${member.user.tag})`);
+                logger.debug(`Assigned "Verified" role to user ${member.id} (${member.user.tag})`);
             } else {
-                console.error(`"verified" role not found in the guild.`);
+                logger.warn(`"Verified" role not found in the guild.`);
             }
 
             // Assign saved roles
             if (user['ranks'] && user['ranks'].length > 0) {
                 const rolesToAdd = user['ranks'].filter((roleId: string) => member.guild.roles.cache.has(roleId)); // Ensure roles exist in the guild
                 await member.roles.add(rolesToAdd);
-                console.log(`Assigned saved roles to user ${member.id} (${member.user.tag}):`, rolesToAdd);
+                logger.debug(`Assigned saved roles to user ${member.id} (${member.user.tag}):`, rolesToAdd);
             }
 
             let username = await noblox.getUsernameFromId(user['robloxId'])
             await member.setNickname(username)
 
-            console.log(`User ${member.id} (${member.user.tag}) has been verified and roles restored.`);
+            logger.debug(`User ${member.id} (${member.user.tag}) has been verified and roles restored.`);
         } else {
-            console.log(`User ${member.id} (${member.user.tag}) not found in the database. Skipping verification.`);
+            logger.debug(`User ${member.id} (${member.user.tag}) not found in the database. Skipping verification.`);
         }
     } catch (error) {
-        console.error(`Error handling GuildMemberAdd event for user ${member.id} (${member.user.tag}):`, error);
+        logger.error(`Error handling GuildMemberAdd event for user ${member.id} (${member.user.tag}):`, error);
     }
 });
 
@@ -152,14 +152,14 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!command) return;
 
 	if (!command) {
-		console.error(`No command matching ${interaction.commandName} was found.`);
+		logger.error(`No command matching ${interaction.commandName} was found.`);
 		return;
 	}
     if (interaction) {
         try {
             await command.execute(interaction);
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
             } else {

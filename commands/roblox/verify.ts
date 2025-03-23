@@ -4,6 +4,8 @@ import { MongoClient, ObjectId } from "mongodb";
 import noblox from "noblox.js";
 import { promises as fs } from "fs";
 import path from "path";
+import logger from '../../utils/logger';
+
 
 const client = new MongoClient(mongoDBConnection, {});
 
@@ -34,10 +36,6 @@ export default {
                 .setRequired(true)
         ),
 
-    /**
-     * Executes the verification command.
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object representing the user's command.
-     */
     async execute(interaction: ChatInputCommandInteraction) {
         await client.connect();
         const database = client.db('HyperVerify');
@@ -50,12 +48,9 @@ export default {
 
         var message = await interaction.reply({ content: 'Hold Tight...'});
         
-        /** @type {number} The Roblox user ID */
         const id = await noblox.getIdFromUsername(username);
         
-        /** @type {string} The Discord user ID */
         const discordId = interaction.user.id;
-
         // eslint-disable-next-line no-undef
         const configPath = path.join(__dirname, '../../config.json');
         const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
@@ -66,7 +61,7 @@ export default {
         }
 
 
-        const user = await collection.findOne({ _id: new ObjectId(discordId) });
+        const user = await collection.findOne({ _id: discordId as unknown as ObjectId });
         const ranks = user?.["roles"] || [];
         if (user) {
             if (user["robloxId"] === id) {
@@ -124,23 +119,23 @@ export default {
                 if (i.customId === 'done') {
 
                     const logIn = await noblox.setCookie(ROBLOSECURITY);
-                    console.log(`Logged in as ${logIn.name}`);
+                    logger.debug(`Logged in as ${logIn.name}`);
                     const user = await noblox.getUserInfo(id);
                     const description = user.description;
-                    console.log(description);
-                    console.log(verificationCode);
+                    logger.debug(description);
+                    logger.debug(verificationCode);
                     if (description === verificationCode)  {
                         embed.setDescription('Verification successful. You now have access to the server.');
                         done.setDisabled(true);
                         await dMessage.edit({ embeds: [embed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(done)] });
                         if (!interaction.member) return;
                         if ('add' in interaction.member.roles) {
-                            await interaction.member.roles.add(verifyRole).catch(console.error);
+                            await interaction.member.roles.add(verifyRole).catch(logger.error);
                         }
                         const database = client.db('HyperVerify');
                         const collection = database.collection('verifiedUsers');
                         await collection.updateOne(
-                            { _id: new ObjectId(discordId) },
+                            { _id: discordId as unknown as ObjectId  },
                             { $set: { robloxId: id, ranks: ranks }},
                             { upsert: true }
                         );
@@ -155,7 +150,7 @@ export default {
                     }
                 }
             } catch (error) {
-                console.log(error)
+                logger.debug(error)
             }
         });
         }
