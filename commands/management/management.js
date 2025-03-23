@@ -27,6 +27,7 @@ module.exports = {
         .addSubcommandGroup(group =>
             group 
                 .setName('verify')
+                .setDescription('Verification related commands') // Added missing description
                 .addSubcommand(subcommand =>
                     subcommand
                         .setName("check")
@@ -34,6 +35,7 @@ module.exports = {
                         .addUserOption(user =>
                             user 
                                 .setName("user")
+                                .setDescription("Select a user.")
                         )
                 )
                 .addSubcommand(subcommand =>
@@ -43,6 +45,7 @@ module.exports = {
                         .addUserOption(user =>
                             user 
                                 .setName("user")
+                                .setDescription("Select a user.")
                                 .setRequired(true)
                         )
                 )
@@ -53,12 +56,14 @@ module.exports = {
                     .addUserOption(user =>
                         user 
                             .setName("user")
+                            .setDescription("Select a user.")
                             .setRequired(true)
                     )
                     .addStringOption(user =>
                         user
                             .setName("id")
                             .setDescription("Specify a roblox ID to allocate the user to.")
+                            .setRequired(true)
                     )
                 )
         ),

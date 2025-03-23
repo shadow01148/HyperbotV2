@@ -49,6 +49,7 @@ async function createTicket(interaction) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('rank')
+        .setDescription('Rank request commands.')
         .addSubcommand(subcommand =>
             subcommand.setName('request')
                 .setDescription('Create a rank request.')
@@ -75,7 +76,7 @@ module.exports = {
         )
         .addSubcommand(subcommand =>
             subcommand.setName('close')
-                .setDescription('Close a ticket.')
+                .setDescription('Close a rank request..')
                 .addIntegerOption(option =>
                     option.setName('ticketnumber')
                         .setDescription('The ticket number to close.')

@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 const { Client, Events, GatewayIntentBits, Collection, MessageFlags } = require('discord.js');
 const { REST, Routes } = require('discord.js');
 var { token, mongoDBConnection } = require('./config.json');
@@ -23,6 +22,7 @@ client.commands = new Collection();
 
 // Load commands
 const commands = [];
+// eslint-disable-next-line no-undef
 const foldersPath = path.join(__dirname, 'commands');
 
 async function loadCommands() {
@@ -36,6 +36,7 @@ async function loadCommands() {
         // Set a new item in the Collection with the key as the command name and the value as the exported module
         if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
+            console.log(command.data)
             commands.push(command.data.toJSON()); // Add this line to register the command
         } else {
             console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
