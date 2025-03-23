@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { rankedRole, servers } = require('../../config.json');
 
 module.exports = {
@@ -9,7 +9,7 @@ module.exports = {
         // check roles first
         //* @type {number} The Discord user ID
         if (!interaction.member.roles.cache.has(rankedRole)) {
-            return await interaction.reply({ content: 'You are not ranked! You must be ranked to access our VIP servers.', ephemeral: true });
+            return await interaction.reply({ content: 'You are not ranked! You must be ranked to access our VIP servers.', flags: MessageFlags.Ephemeral });
         }
         await interaction.reply(`<@${interaction.user.id}>, Check your DMs!`);
         // list down servers in categories with formatting

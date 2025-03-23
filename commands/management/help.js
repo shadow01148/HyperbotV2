@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -46,7 +46,7 @@ module.exports = {
         const collector = message.createMessageComponentCollector({ time: 60000 });
 
         collector.on('collect', async (buttonInteraction) => {
-            if (buttonInteraction.user.id !== interaction.user.id) return await buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", ephemeral: true });
+            if (buttonInteraction.user.id !== interaction.user.id) return await buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", flags: MessageFlags.Ephemeral });
 
             if (buttonInteraction.customId === 'prev' && currentPage > 0) currentPage--;
             else if (buttonInteraction.customId === 'next' && currentPage < totalPages - 1) currentPage++;

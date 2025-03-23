@@ -1,5 +1,4 @@
-/* eslint-disable no-undef */
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { verifyRole, mongoDBConnection, ROBLOSECURITY } = require('../../config.json');
 const { MongoClient } = require('mongodb');
 const noblox = require('noblox.js');
@@ -43,7 +42,7 @@ module.exports = {
         const collection = database.collection('verifiedUsers');
         const username = interaction.options.getString('username');
 
-        var message = await interaction.reply({ content: 'Hold Tight!'});
+        var message = await interaction.reply({ content: 'Hold Tight...'});
         
         /** @type {number} The Roblox user ID */
         const id = await noblox.getIdFromUsername(username);
@@ -51,11 +50,12 @@ module.exports = {
         /** @type {string} The Discord user ID */
         const discordId = interaction.user.id;
 
+        // eslint-disable-next-line no-undef
         const configPath = path.join(__dirname, '../../config.json');
         const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
 
         if (config.blacklistedIds.includes(discordId)) {
-            await interaction.reply({ content: "❌ This user is blacklisted from verification.", ephemeral: true });
+            await interaction.reply({ content: "❌ This user is blacklisted from verification.", flags: MessageFlags.Ephemeral });
             return;
         }
 

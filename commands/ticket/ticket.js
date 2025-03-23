@@ -1,8 +1,8 @@
-/* eslint-disable no-undef */
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
 
+// eslint-disable-next-line no-undef
 const ticketsDataPath = path.join(__dirname, '../../ticketsData.json');
 
 async function createTicket(interaction) {
@@ -16,7 +16,7 @@ async function createTicket(interaction) {
         );
 
         if (existingTicket) {
-            await interaction.reply("You already have an open ticket!", { ephemeral: true });
+            await interaction.reply("You already have an open ticket!", { flags: MessageFlags.Ephemeral });
             return;
         }
 
@@ -39,10 +39,10 @@ async function createTicket(interaction) {
         
         await fs.writeFile(ticketsDataPath, JSON.stringify(ticketData2, null, 2));        
 
-        await interaction.reply(`Ticket created! Ticket number: ${ticketNumber}`, { ephemeral: true });
+        await interaction.reply(`Ticket created! Ticket number: ${ticketNumber}`, { flags: MessageFlags.Ephemeral });
     } catch (error) {
         console.error("Error creating ticket:", error);
-        await interaction.reply("An error occurred while creating your ticket.", { ephemeral: true });
+        await interaction.reply("An error occurred while creating your ticket.", { flags: MessageFlags.Ephemeral });
     }
 }
 

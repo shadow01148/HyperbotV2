@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 //@ts-check
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
 const noblox = require('noblox.js');
@@ -65,8 +65,9 @@ module.exports = {
 
 
 
+
     /**
-     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; getString: (arg0: string) => any; }; user: { id: any; }; reply: (arg0: { content?: string; embeds?: EmbedBuilder[]; ephemeral?: boolean; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; member: { roles: { add: (arg0: string) => Promise<any>; }; setNickname: (arg0: any) => any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
+     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; getString: (arg0: string) => any; }; user: { id: any; }; reply: (arg0: { content?: string; embeds?: EmbedBuilder[]; flags?: MessageFlags; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; member: { roles: { add: (arg0: string) => Promise<any>; }; setNickname: (arg0: string) => any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
      */
     async execute(interaction) {
         const subcommandGroup = interaction.options.getSubcommandGroup();
@@ -101,7 +102,7 @@ module.exports = {
                 .setThumbnail(`https://www.roblox.com/headshot-thumbnail/image?userId=${userData['robloxId']}&width=420&height=420&format=png`)
                 .setTimestamp();
             
-                await interaction.reply({ embeds: [embed], ephemeral: true });
+                await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
                 return
             } 
             if (subcommand === "blacklist") {
@@ -124,9 +125,9 @@ module.exports = {
                 if (!config.blacklistedIds.includes(discordId)) {
                     config.blacklistedIds.push(discordId);
                     await fs.writeFile(configPath, JSON.stringify(config, null, 4));
-                    await interaction.reply({ content: `✅ User <@${discordId}> has been blacklisted from verifying.`, ephemeral: true });
+                    await interaction.reply({ content: `✅ User <@${discordId}> has been blacklisted from verifying.`, flags: MessageFlags.Ephemeral });
                 } else {
-                    await interaction.reply({ content: "❌ This user is already blacklisted.", ephemeral: true });
+                    await interaction.reply({ content: "❌ This user is already blacklisted.", flags: MessageFlags.Ephemeral });
                 }
             }
             if (subcommand === "manual") {
@@ -158,7 +159,7 @@ module.exports = {
             const ticketEntries = Object.entries(ticketsData);
 
             if (ticketEntries.length === 0) {
-                return await interaction.reply({ content: 'No open rank request tickets found.', ephemeral: true });
+                return await interaction.reply({ content: 'No open rank request tickets found.', flags: MessageFlags.Ephemeral });
             }
 
             const ticketsPerPage = 5;
@@ -210,9 +211,9 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join('\n- ')}` : "❌ No d
 
             const collector = message.createMessageComponentCollector({ time: 60000 });
 
-            collector.on('collect', async (/** @type {{ user: { id: any; }; reply: (arg0: { content: string; ephemeral: boolean; }) => any; customId: string; update: (arg0: { embeds: EmbedBuilder[]; components: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; }) => any; }} */ buttonInteraction) => {
+            collector.on('collect', async (/** @type {{ user: { id: any; }; reply: (arg0: { content: string; flags: MessageFlags; }) => any; customId: string; update: (arg0: { embeds: EmbedBuilder[]; components: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; }) => any; }} */ buttonInteraction) => {
                 if (buttonInteraction.user.id !== interaction.user.id) {
-                    return buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", ephemeral: true });
+                    return buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", flags: MessageFlags.Ephemeral });
                 }
 
                 if (buttonInteraction.customId === 'prev' && currentPage > 0) currentPage--;
