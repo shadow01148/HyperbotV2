@@ -1,8 +1,9 @@
 // refresh vip server links
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
-const fs = require('fs').promises;
+import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from 'discord.js';
+import {promises as fs} from 'fs';
 
-module.exports = {
+
+export default {
     data: new SlashCommandBuilder()
         .setName('reload')
         .setDescription('Refresh VIP server links.')
@@ -26,7 +27,7 @@ module.exports = {
             .setDescription("Expert VIP 2 server link.")
             .setRequired(false)
         ),
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         const vip1 = interaction.options.getString("vip1")
         const vip2 = interaction.options.getString("vip2")
         const expertvip1 = interaction.options.getString("expertvip1")
@@ -39,10 +40,10 @@ module.exports = {
             if (expertvip1) config.servers.expertLink1 = expertvip1;
             if (expertvip2) config.servers.expertLink2 = expertvip2;
             await fs.writeFile('config.json', JSON.stringify(config, null, 2));
-            await interaction.reply("VIP server links refreshed!", { flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: `VIP server links refreshed!`, flags: MessageFlags.Ephemeral });
         } catch (error) {
             console.error("Error refreshing VIP server links:", error);
-            await interaction.reply("An error occurred while refreshing VIP server links.", { flags: MessageFlags.Ephemeral });
+            await interaction.reply({content: `An error occurred while refreshing VIP server links.`, flags: MessageFlags.Ephemeral });
         }
     }
 };

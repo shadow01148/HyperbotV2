@@ -1,14 +1,17 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
-const { rankedRole, servers } = require('../../config.json');
+import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from 'discord.js';
+import { rankedRole, servers } from '../../config.json';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('servers')
         .setDescription('Get the list of VIP and expert servers.'),
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         // check roles first
         //* @type {number} The Discord user ID
-        if (!interaction.member.roles.cache.has(rankedRole)) {
+        if (!interaction.member) {
+            return await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+        }
+        if (!('cache' in interaction.member.roles) || !interaction.member.roles.cache.has(rankedRole)) {
             return await interaction.reply({ content: 'You are not ranked! You must be ranked to access our VIP servers.', flags: MessageFlags.Ephemeral });
         }
         await interaction.reply(`<@${interaction.user.id}>, Check your DMs!`);
@@ -17,18 +20,19 @@ module.exports = {
     -----------------------
     These private servers are a place where you can build without having to worry about someone potentially copying your creation! These private servers are meant for Plane Crazy Community Discord members only.
 
-    | VIP1: ${servers[0]}
-    | VIP2: ${servers[1]}
+    | VIP1: ${servers.vipLink1}
+    | VIP2: ${servers.vipLink2}
 
     **EXPERT SERVERS**
     ----------------------
     These servers are exclusively for members with expert-level ranks.
 
-    | EXP1: ${servers[2]}
-    | EXP2: ${servers[3]}
+    | EXP1: ${servers.expertLink1}
+    | EXP2: ${servers.expertLink2}
 
     ⚠️ Those found sharing private server links to anyone outside the PCC Discord or to unranked members will be banned.`;
 
         await interaction.user.send(serverMessage);
+        return;
     },
 };

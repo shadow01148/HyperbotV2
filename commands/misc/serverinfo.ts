@@ -1,17 +1,14 @@
 // @ts-check
-const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require("discord.js");
+import { SlashCommandBuilder, EmbedBuilder, ChannelType, ChatInputCommandInteraction } from "discord.js";
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName("serverinfo")
         .setDescription("Displays information about the server."),
     
-
-    /**
-     * @param {{ guild: { guild: any; }; reply: (arg0: { embeds: EmbedBuilder[]; }) => any; }} interaction
-     */
-    async execute(interaction) {
-        const { guild } = interaction.guild;
+    async execute(interaction: ChatInputCommandInteraction) {
+        if (!interaction.guild) return;
+        const guild = interaction.guild;
 
         const owner = await guild.fetchOwner();
         
@@ -25,7 +22,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor(0x1f8b4c)
             .setTitle(guild.name)
-            .setThumbnail(guild.iconURL({ dynamic: true, size: 1024 }))
+            .setThumbnail(guild.iconURL({ size: 1024 }))
             .addFields(
                 {name: "Members", value: `${memberCount}`, inline: true},
                 { name: "Owner", value: `${owner}`, inline: true},

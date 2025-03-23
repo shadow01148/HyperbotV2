@@ -1,11 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction } from 'discord.js';
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changelog')
         .setDescription('Displays the latest changelog'),
 
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         const embed = new EmbedBuilder()
             .setTitle('Changelog')
             .setDescription('**v2.00**')

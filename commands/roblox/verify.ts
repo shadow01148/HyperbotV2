@@ -1,27 +1,29 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, MessageFlags } = require('discord.js');
-const { verifyRole, mongoDBConnection, ROBLOSECURITY } = require('../../config.json');
-const { MongoClient } = require('mongodb');
-const noblox = require('noblox.js');
-const fs = require('fs').promises;
-const path = require('path');
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from "discord.js";
+import { verifyRole, mongoDBConnection, ROBLOSECURITY } from "../../config.json";
+import { MongoClient, ObjectId } from "mongodb";
+import noblox from "noblox.js";
+import { promises as fs } from "fs";
+import path from "path";
 
 const client = new MongoClient(mongoDBConnection, {});
 
 function generateVerificationCode() {
-    const words = ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape', 'honeydew', 'kiwi', 'lemon', 'mango', 'nectarine', 'orange', 'pear', 'quince', 'raspberry', 'strawberry', 'tangerine', 'watermelon'];
+    const words = ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape', 'honeydew', 'kiwi', 'lemon', 
+                   'mango', 'nectarine', 'orange', 'pear', 'quince', 'raspberry', 'strawberry', 'tangerine', 'watermelon'];
     const wordCount = 5;
 
-    for (let i = words.length - 1; i > words.length - 1 - wordCount; i--) {
+    for (let i = words.length - 1; i >= wordCount; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [words[i], words[j]] = [words[j], words[i]];
+        const wordI = words[i];
+        const wordJ = words[j];
+        if (wordI !== undefined && wordJ !== undefined) {
+            [words[i], words[j]] = [wordJ, wordI];  // Swap elements
+        }
     }
-
     return words.slice(-wordCount).join(' ');
 }
 
-
-
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Verify and link your Roblox account to your Discord account.')
@@ -36,11 +38,15 @@ module.exports = {
      * Executes the verification command.
      * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object representing the user's command.
      */
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         await client.connect();
         const database = client.db('HyperVerify');
         const collection = database.collection('verifiedUsers');
         const username = interaction.options.getString('username');
+        if (!username) {
+            await interaction.reply({ content: 'Username is required.', flags: MessageFlags.Ephemeral });
+            return;
+        }
 
         var message = await interaction.reply({ content: 'Hold Tight...'});
         
@@ -60,11 +66,11 @@ module.exports = {
         }
 
 
-        const user = await collection.findOne({ _id: discordId });
-        const ranks = user?.roles || [];
+        const user = await collection.findOne({ _id: new ObjectId(discordId) });
+        const ranks = user?.["roles"] || [];
         if (user) {
-            if (user.robloxId === id) {
-                await message.edit("You are already verified under the same username.", {components: [], embeds: [] })
+            if (user["robloxId"] === id) {
+                await message.edit({content: `You are already verified under the same username.`, components: [], embeds: [] })
             }
             const reverifyConfirmation = new EmbedBuilder()
                 .setTitle('Reverify')
@@ -74,8 +80,9 @@ module.exports = {
                 .setStyle(ButtonStyle.Primary)
                 .setLabel('Yes')
                 .setCustomId('yes');
-            await message.edit({ embeds: [reverifyConfirmation], components: [new ActionRowBuilder().addComponents(yes)] });
-            const filter = i => i.customId === 'yes' && i.user.id === interaction.user.id;
+            await message.edit({ embeds: [reverifyConfirmation], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(yes)] });
+            const filter = (i: { customId: string; user: { id: string; }; }) => i.customId === 'yes' && i.user.id === interaction.user.id;
+            if (!interaction.channel) return;
             const collector = interaction.channel.createMessageComponentCollector({ filter, time: 10000 });
             // if yes, continue to the code. if expried, return
             collector.on('collect', async i => {
@@ -88,7 +95,7 @@ module.exports = {
         } else {
             await verify(interaction);
         }
-        async function verify(interaction) {
+        async function verify(interaction: ChatInputCommandInteraction) {
         /** @param {import('discord.js').ButtonBuilder}*/
         const done = new ButtonBuilder()
             .setStyle(ButtonStyle.Primary)
@@ -103,12 +110,13 @@ module.exports = {
             .setColor('Blurple')
             .setTimestamp();
         
-        const row = new ActionRowBuilder().addComponents(done);
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(done);
 
         const dMessage = await interaction.user.send({ embeds: [embed], components: [row] });
         await message.edit({ content: 'Check your DMs!', components: [] });
 
-        const filter = i => i.customId === 'done' && i.user.id === interaction.user.id;
+        const filter = (i: { customId: string; user: { id: string; }; }) => i.customId === 'done' && i.user.id === interaction.user.id;
+        if (!interaction.user.dmChannel) return
         const collector = interaction.user.dmChannel.createMessageComponentCollector({ filter, time: 60000 });
         
         collector.on('collect', async i => {
@@ -124,21 +132,26 @@ module.exports = {
                     if (description === verificationCode)  {
                         embed.setDescription('Verification successful. You now have access to the server.');
                         done.setDisabled(true);
-                        await dMessage.edit({ embeds: [embed], components: [new ActionRowBuilder().addComponents(done)] });
-                        await interaction.member.roles.add(verifyRole).catch(console.error);
+                        await dMessage.edit({ embeds: [embed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(done)] });
+                        if (!interaction.member) return;
+                        if ('add' in interaction.member.roles) {
+                            await interaction.member.roles.add(verifyRole).catch(console.error);
+                        }
                         const database = client.db('HyperVerify');
                         const collection = database.collection('verifiedUsers');
                         await collection.updateOne(
-                            { _id: discordId },
+                            { _id: new ObjectId(discordId) },
                             { $set: { robloxId: id, ranks: ranks }},
                             { upsert: true }
                         );
-                        await interaction.member.setNickname(user.name)
+                        if ('setNickname' in interaction.member) {
+                            await interaction.member.setNickname(user.name);
+                        }
                         
                     } else {
                         embed.setDescription('Verification failed. Please make sure you have entered the correct code in your Roblox profile description.');
                         done.setDisabled(true);
-                        await dMessage.edit({ embeds: [embed], components: [new ActionRowBuilder().addComponents(done)] });
+                        await dMessage.edit({ embeds: [embed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(done)] });
                     }
                 }
             } catch (error) {

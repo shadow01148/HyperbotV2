@@ -1,15 +1,21 @@
-/* eslint-disable no-undef */
-//@ts-check
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, MessageFlags } = require('discord.js');
-const fs = require('fs').promises;
-const path = require('path');
-const noblox = require('noblox.js');
-const { mongoDBConnection, verifyRole } = require('../../config.json');
-const { MongoClient } = require('mongodb');
+import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, MessageFlags, ChatInputCommandInteraction, ButtonInteraction } from 'discord.js';
+import { promises as fs } from 'fs';
+import path from 'path';
+import noblox from 'noblox.js';
+import { MongoClient, ObjectId } from 'mongodb';
+import { mongoDBConnection } from '../../config.json';
 
 const client = new MongoClient(mongoDBConnection, {});
 
-module.exports = {
+interface TicketData {
+    authorId: string;
+    ranks: string[];
+    blockCount: number;
+    upvoteCount: number;
+    downvoteCount: number;
+}
+
+export default {
     data: new SlashCommandBuilder()
         .setName('manage')
         .setDescription('Management commands')
@@ -82,22 +88,16 @@ module.exports = {
                     )
                 )
         ),
-
-
-
-
-    /**
-     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; getString: (arg0: string) => any; }; user: { id: any; }; guild: { members: { fetch: (arg0: any) => any; }; id: any; }; reply: (arg0: { embeds?: EmbedBuilder[]; flags?: MessageFlags; content?: string; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; member: { roles: { add: (arg0: string) => Promise<any>; }; setNickname: (arg0: string) => any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
-     */
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         const subcommandGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
 
         if (subcommand === 'roles' && subcommandGroup === 'show') {
+            if (!interaction.guild) return;
             const targetUser = interaction.options.getUser("user") || interaction.user;
             const member = await interaction.guild.members.fetch(targetUser.id);
 
-            const roles = member.roles.cache.filter((/** @type {{ id: any; }} */ role) => role.id !== interaction.guild.id).map((/** @type {{ toString: () => any; }} */ role) => role.toString());
+            const roles = member.roles.cache.filter((role) => role.id !== interaction.guild!.id).map((role) => role.toString());
 
             const embed = new EmbedBuilder()
                 .setTitle(`🔖 Roles for ${targetUser.tag}`)
@@ -116,7 +116,7 @@ module.exports = {
                 const targetUser = interaction.options.getUser("user") || interaction.user;
                 const discordId = targetUser.id;
             
-                const userData = await collection.findOne({ _id: discordId });
+                const userData = await collection.findOne({ _id: new ObjectId(discordId) });
 
                 if (!userData) {
                     await interaction.reply({content: "No user found in the database."})
@@ -145,12 +145,16 @@ module.exports = {
                 const collection = database.collection('verifiedUsers');
             
                 const targetUser = interaction.options.getUser("user");
+                if (!targetUser) {
+                    await interaction.reply({ content: "User not found.", flags: MessageFlags.Ephemeral });
+                    return;
+                }
                 const discordId = targetUser.id;
 
-                const userData = await collection.findOne({ _id: discordId });
+                const userData = await collection.findOne({ _id:  new ObjectId(discordId) });
 
                 if (userData) {
-                    await collection.deleteOne({ _id: discordId });
+                    await collection.deleteOne({ _id: new ObjectId(discordId) });
                 }
 
                 const configPath = path.join(__dirname, '../../config.json');
@@ -165,24 +169,34 @@ module.exports = {
                 }
             }
             if (subcommand === "manual") {
+                if (!interaction.guild) return;
+                if (!interaction.member) return;
                 await client.connect();
                 const database = client.db('HyperVerify');
                 const collection = database.collection('verifiedUsers');
             
                 const targetUser = interaction.options.getUser("user");
+                if (!targetUser) {
+                    await interaction.reply({ content: "User not found.", flags: MessageFlags.Ephemeral });
+                    return;
+                }
                 const targetRobloxId = Number(interaction.options.getString("id"))
-                const discordId = targetUser.id;
+                const discordId = targetUser.id
+                const verifyRole = interaction.guild.roles.cache.find(role => role.name === 'Verified');
 
-                const userData = await collection.findOne({ _id: discordId });
+                const userData = await collection.findOne({ _id: new ObjectId(discordId) });
                 const user = await noblox.getUserInfo(targetRobloxId)
 
                 if (userData) {
                     await interaction.reply({content: "The user you have applied is already verified."})
                     return;
                 }
-                await interaction.member.roles.add(verifyRole).catch(console.error);
-                await interaction.member.setNickname(user.name)
-                await collection.insertOne({_id: discordId, robloxId: user.id, ranks: []})
+                const member = interaction.guild.members.cache.get(targetUser.id);
+                if (member && verifyRole) {
+                    await member.roles.add(verifyRole).catch(console.error);
+                    await member.setNickname(user.name).catch(console.error);
+                }
+                await collection.insertOne({_id: new ObjectId(discordId), robloxId: user.id, ranks: []})
                 await interaction.reply({content: "User successfully added to the database."})
 
             }
@@ -190,20 +204,18 @@ module.exports = {
         if (subcommandGroup === 'rankrequest' && subcommand === 'list') {    
             const ticketsDataPath = path.join(__dirname, '..', '..', 'ticketsData.json'); // Adjust as needed
             const ticketsData = JSON.parse(await fs.readFile(ticketsDataPath, 'utf8'));
-            const ticketEntries = Object.entries(ticketsData);
+            const ticketEntries = Object.entries(ticketsData) as [string, TicketData][];
 
             if (ticketEntries.length === 0) {
-                return await interaction.reply({ content: 'No open rank request tickets found.', flags: MessageFlags.Ephemeral });
+                await interaction.reply({ content: 'No open rank request tickets found.', flags: MessageFlags.Ephemeral });
+                return;
             }
 
             const ticketsPerPage = 5;
             let currentPage = 0;
             const totalPages = Math.ceil(ticketEntries.length / ticketsPerPage);
 
-            /**
-             * @param {number} page
-             */
-            function generateEmbed(page) {
+            function generateEmbed(page: number) {
                 const start = page * ticketsPerPage;
                 const end = start + ticketsPerPage;
                 const ticketList = ticketEntries.slice(start, end);
@@ -227,7 +239,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join('\n- ')}` : "❌ No d
             }
 
             // Pagination buttons
-            const row = new ActionRowBuilder()
+            const row = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
                     new ButtonBuilder()
                         .setCustomId('prev')
@@ -245,9 +257,9 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join('\n- ')}` : "❌ No d
 
             const collector = message.createMessageComponentCollector({ time: 60000 });
 
-            collector.on('collect', async (/** @type {{ user: { id: any; }; reply: (arg0: { content: string; flags: MessageFlags; }) => any; customId: string; update: (arg0: { embeds: EmbedBuilder[]; components: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; }) => any; }} */ buttonInteraction) => {
+            collector.on('collect', async (buttonInteraction: ButtonInteraction): Promise<void> => {
                 if (buttonInteraction.user.id !== interaction.user.id) {
-                    return buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", flags: MessageFlags.Ephemeral });
+                    await buttonInteraction.reply({ content: "❌ You're not allowed to use this button!", flags: MessageFlags.Ephemeral });
                 }
 
                 if (buttonInteraction.customId === 'prev' && currentPage > 0) currentPage--;
@@ -256,7 +268,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join('\n- ')}` : "❌ No d
                 await buttonInteraction.update({
                     embeds: [generateEmbed(currentPage)],
                     components: [
-                        new ActionRowBuilder()
+                        new ActionRowBuilder<ButtonBuilder>()
                             .addComponents(
                                 new ButtonBuilder()
                                     .setCustomId('prev')

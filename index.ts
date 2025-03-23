@@ -1,52 +1,59 @@
-const { Client, Events, GatewayIntentBits, Collection, MessageFlags } = require('discord.js');
-const { REST, Routes } = require('discord.js');
-var { token, mongoDBConnection } = require('./config.json');
-const fs = require('node:fs').promises;
-const path = require('node:path');
-const { MongoClient } = require('mongodb');
-const noblox = require('noblox.js');
+import { REST, Routes, Client, Events, GatewayIntentBits, Collection, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord.js';
+import { token, mongoDBConnection } from './config.json';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { MongoClient, ObjectId } from 'mongodb';
+import noblox from 'noblox.js';
 
-
+interface ExtendedClient extends Client {
+    commands: Collection<string, any>;
+}
 
 const mongoClient = new MongoClient(mongoDBConnection, {});
 
-const client = new Client({ intents: [ 
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.GuildMembers
-] });
+const client: ExtendedClient = new Client({
+    intents: [
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMembers
+    ]
+}) as ExtendedClient;
+
 client.commands = new Collection();
 
 // Load commands
-const commands = [];
-// eslint-disable-next-line no-undef
+const commands: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 const foldersPath = path.join(__dirname, 'commands');
-
 async function loadCommands() {
-    const commandFolders = await fs.readdir(foldersPath);
-    for (const folder of commandFolders) {
-    const commandsPath = path.join(foldersPath, folder);
-    const commandFiles = (await fs.readdir(commandsPath)).filter(file => file.endsWith('.js'));
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
-        // Set a new item in the Collection with the key as the command name and the value as the exported module
-        if ('data' in command && 'execute' in command) {
-            client.commands.set(command.data.name, command);
-            console.log(command.data)
-            commands.push(command.data.toJSON()); // Add this line to register the command
-        } else {
-            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+    try {
+        const commandFolders = await fs.readdir(foldersPath);
+        for (const folder of commandFolders) {
+            const commandsPath = path.join(foldersPath, folder);
+            const commandFiles = (await fs.readdir(commandsPath)).filter(file => file.endsWith('.js'));
+
+            for (const file of commandFiles) {
+                const filePath = path.join(commandsPath, file);
+                const command = await import(filePath); // No need for "file://"
+
+                if (command.default?.data && command.default?.execute) {
+                    client.commands.set(command.default.data.name, command.default);
+                    console.log(`Command loaded: ${command.default.data.name}`);
+                    commands.push(command.default.data.toJSON()); // Add this line to register the command
+                } else {
+                    console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error loading commands: ${error}`);
     }
 }
-    }
-}
-    
 
 loadCommands();
+
 
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
@@ -84,12 +91,12 @@ client.on(Events.GuildMemberRemove, async (member) => {
         }
 
         // Find the user in the database
-        const user = await collection.findOne({ _id: member.id });
+        const user = await collection.findOne({ _id: new ObjectId(member.id) });
 
         if (user) {
             // Update the user's roles in the database
             await collection.updateOne(
-                { _id: member.id },
+                { _id: new ObjectId(member.id) },
                 { $set: { ranks: rolesToSave } },
             );
             console.log(`Roles saved for user ${member.id} (${member.user.tag}):`, rolesToSave);
@@ -107,7 +114,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
         const collection = database.collection('verifiedUsers');
 
         // Find the user in the database
-        const user = await collection.findOne({ _id: member.id });
+        const user = await collection.findOne({ _id: new ObjectId(member.id) });
 
         if (user) {
             // Assign the "verified" role
@@ -120,13 +127,13 @@ client.on(Events.GuildMemberAdd, async (member) => {
             }
 
             // Assign saved roles
-            if (user.ranks && user.ranks.length > 0) {
-                const rolesToAdd = user.ranks.filter(roleId => member.guild.roles.cache.has(roleId)); // Ensure roles exist in the guild
+            if (user['ranks'] && user['ranks'].length > 0) {
+                const rolesToAdd = user['ranks'].filter((roleId: string) => member.guild.roles.cache.has(roleId)); // Ensure roles exist in the guild
                 await member.roles.add(rolesToAdd);
                 console.log(`Assigned saved roles to user ${member.id} (${member.user.tag}):`, rolesToAdd);
             }
 
-            let username = noblox.getUsernameFromId(user.robloxId)
+            let username = await noblox.getUsernameFromId(user['robloxId'])
             await member.setNickname(username)
 
             console.log(`User ${member.id} (${member.user.tag}) has been verified and roles restored.`);
@@ -139,9 +146,10 @@ client.on(Events.GuildMemberAdd, async (member) => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
-	if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand()) return;
 
-	const command = interaction.client.commands.get(interaction.commandName);
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
 
 	if (!command) {
 		console.error(`No command matching ${interaction.commandName} was found.`);

@@ -1,6 +1,6 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } from 'discord.js';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('unde')
         .setDescription('Unde commands.')
@@ -27,7 +27,7 @@ module.exports = {
                 .setDescription("Select a random user.")
         ),
 
-    async execute(interaction) {
+    async execute(interaction: ChatInputCommandInteraction) {
         await interaction.reply("This command portion is redundant.");
     },
 };
