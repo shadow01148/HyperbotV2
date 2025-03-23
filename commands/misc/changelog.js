@@ -11,7 +11,7 @@ module.exports = {
             .setDescription('**v2.00**')
             .setColor(0x2f3136) // Discord dark mode color
             .addFields(
-                { name: '\u200B', value: `Upgraded to v14\n`, inline: false }
+                { name: '\u200B', value: `+ Upgraded to v14\n`, inline: false }
             );
 
         await interaction.reply({ embeds: [embed] });

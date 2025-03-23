@@ -1,9 +1,10 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('say')
 		.setDescription('Make the bot say something.')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addStringOption(option =>
             option.setName("string")
             .setDescription("What to make it say.")

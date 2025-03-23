@@ -16,6 +16,21 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addSubcommandGroup(group =>
             group
+                .setName('roles')
+                .setDescription('Role related commands')
+                .addSubcommand(subcommand =>
+                    subcommand
+                        .setName('show')
+                        .setDescription(`Shows a specific user's roles`)
+                        .addUserOption(option =>
+                            option
+                                .setName('user')
+                                .setDescription('Select a user')
+                        )
+                )
+        )
+        .addSubcommandGroup(group =>
+            group
                 .setName('rankrequest')
                 .setDescription('Rank Requests commands')
                 .addSubcommand(subcommand =>
@@ -72,11 +87,25 @@ module.exports = {
 
 
     /**
-     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; getString: (arg0: string) => any; }; user: { id: any; }; reply: (arg0: { content?: string; embeds?: EmbedBuilder[]; flags?: MessageFlags; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; member: { roles: { add: (arg0: string) => Promise<any>; }; setNickname: (arg0: string) => any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
+     * @param {{ options: { getSubcommandGroup: () => any; getSubcommand: () => any; getUser: (arg0: string) => any; getString: (arg0: string) => any; }; user: { id: any; }; guild: { members: { fetch: (arg0: any) => any; }; id: any; }; reply: (arg0: { embeds?: EmbedBuilder[]; flags?: MessageFlags; content?: string; components?: ActionRowBuilder<import("discord.js").AnyComponentBuilder>[]; fetchReply?: boolean; }) => any; member: { roles: { add: (arg0: string) => Promise<any>; }; setNickname: (arg0: string) => any; }; editReply: (arg0: { components: never[]; }) => any; }} interaction
      */
     async execute(interaction) {
         const subcommandGroup = interaction.options.getSubcommandGroup();
         const subcommand = interaction.options.getSubcommand();
+
+        if (subcommand === 'roles' && subcommandGroup === 'show') {
+            const targetUser = interaction.options.getUser("user") || interaction.user;
+            const member = await interaction.guild.members.fetch(targetUser.id);
+
+            const roles = member.roles.cache.filter((/** @type {{ id: any; }} */ role) => role.id !== interaction.guild.id).map((/** @type {{ toString: () => any; }} */ role) => role.toString());
+
+            const embed = new EmbedBuilder()
+                .setTitle(`🔖 Roles for ${targetUser.tag}`)
+                .setDescription(roles.join(", "))
+                .setColor("#2ECC71") // Light green color
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        }
+                
 
         if (subcommandGroup === 'verify') {
             if (subcommand === 'check') {
@@ -212,7 +241,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join('\n- ')}` : "❌ No d
                         .setDisabled(currentPage === totalPages - 1)
                 );
 
-            const message = await interaction.reply({ embeds: [generateEmbed(currentPage)], components: [row], fetchReply: true });
+            const message = await interaction.reply({ embeds: [generateEmbed(currentPage)], components: [row]});
 
             const collector = message.createMessageComponentCollector({ time: 60000 });
 
