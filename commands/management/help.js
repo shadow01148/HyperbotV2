@@ -41,7 +41,7 @@ module.exports = {
         const message = await interaction.reply({ 
                 embeds: [generateEmbed(currentPage)], 
                 components: [row] 
-            }).withResponse();
+            })
             
         const collector = message.createMessageComponentCollector({ time: 60000 });
 

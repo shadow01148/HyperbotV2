@@ -84,7 +84,7 @@ module.exports = {
                 )
         ),
     async execute(interaction) {
-        if (interaction.options.getSubcommand() === 'open') {
+        if (interaction.options.getSubcommand() === 'request') {
             await createTicket(interaction);
         }
     }

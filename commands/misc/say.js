@@ -1,4 +1,3 @@
-// @ts-check
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
@@ -17,12 +16,9 @@ module.exports = {
         ),
 
 
-	/**
-     * @param {{ options: { getString: (arg0: string) => any; getChannel: (arg0: string) => any; }; reply: (arg0: { content: string; flags: MessageFlags; }) => any; send: (arg0: any) => any; }} interaction
-     */
 	async execute(interaction) {
 		const str = interaction.options.getString("string")
-        const channel = interaction.options.getChannel("channel")
+        const channel = interaction.options.getChannel("channel") || await interaction.guild.channels.fetch(interaction.channel.id)
         await interaction.reply({ content: 'Message sent.', flags: MessageFlags.Ephemeral });
         if (channel === null) {
             await interaction.send(str)
