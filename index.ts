@@ -213,9 +213,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (now < expirationTime) {
       const expiredTimestamp = Math.round(expirationTime / 1_000);
-      await interaction.reply({
+      await interaction.editReply({
         content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -233,7 +232,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } catch (error) {
       logger.error(error);
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({
+        await interaction.reply({
           content: "There was an error while executing this command!",
           flags: MessageFlags.Ephemeral,
         });

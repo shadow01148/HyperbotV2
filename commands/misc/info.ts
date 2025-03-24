@@ -10,7 +10,6 @@ export default {
     .setName("info")
     .setDescription("Replies with information about the bot."),
   async execute(interaction: ChatInputCommandInteraction) {
-    /** @type {import('discord.js').Embed} */
     const embed = new EmbedBuilder()
       .setTitle("HyperVerify Rewrite")
       .setDescription(

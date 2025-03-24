@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "build": "tsc",
-    "start": "tsc && node dist/index.js",
+    "start": "rimraf dist && tsc && node dist/index.js",
     "dev": "nodemon --ext ts --exec node --loader ts-node/esm src/index.ts",
     "lint": "eslint . --ext .ts"
   },
@@ -24,6 +24,7 @@
     "@types/node": "^22.13.11",
     "eslint": "^9.22.0",
     "globals": "^16.0.0",
+    "rimraf": "^6.0.1",
     "nodemon": "^3.1.0",
     "prettier": "3.5.3",
     "ts-node": "^10.9.2",

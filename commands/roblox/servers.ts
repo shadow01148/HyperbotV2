@@ -11,10 +11,9 @@ export default {
     .setName("servers")
     .setDescription("Get the list of VIP and expert servers."),
   async execute(interaction: ChatInputCommandInteraction) {
-    // check roles first
-    //* @type {number} The Discord user ID
+    await interaction.deferReply();
     if (!interaction.member) {
-      return await interaction.reply({
+      return await interaction.followUp({
         content: "This command can only be used in a server.",
         flags: MessageFlags.Ephemeral,
       });
@@ -23,13 +22,13 @@ export default {
       !("cache" in interaction.member.roles) ||
       !interaction.member.roles.cache.has(rankedRole)
     ) {
-      return await interaction.reply({
+      return await interaction.followUp({
         content:
           "You are not ranked! You must be ranked to access our VIP servers.",
         flags: MessageFlags.Ephemeral,
       });
     }
-    await interaction.reply(`<@${interaction.user.id}>, Check your DMs!`);
+    await interaction.followUp(`<@${interaction.user.id}>, Check your DMs!`);
     // list down servers in categories with formatting
     const serverMessage = `**PCC VIP SERVERS**
     -----------------------

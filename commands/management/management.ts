@@ -97,7 +97,8 @@ export default {
             ),
         ),
     ),
-  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+  async execute(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
 
@@ -115,7 +116,7 @@ export default {
         .setTitle(`🔖 Roles for ${targetUser.tag}`)
         .setDescription(roles.join(", "))
         .setColor("#2ECC71"); // Light green color
-      await interaction.reply({
+      await interaction.followUp({
         embeds: [embed],
         flags: MessageFlags.Ephemeral,
       });
@@ -136,7 +137,7 @@ export default {
         });
 
         if (!userData) {
-          await interaction.reply({
+          await interaction.followUp({
             content: "No user found in the database.",
           });
           return;
@@ -163,7 +164,7 @@ export default {
           )
           .setTimestamp();
 
-        await interaction.reply({
+        await interaction.followUp({
           embeds: [embed],
           flags: MessageFlags.Ephemeral,
         });
@@ -176,7 +177,7 @@ export default {
 
         const targetUser = interaction.options.getUser("user");
         if (!targetUser) {
-          await interaction.reply({
+          await interaction.followUp({
             content: "User not found.",
             flags: MessageFlags.Ephemeral,
           });
@@ -198,12 +199,12 @@ export default {
         if (!config.blacklistedIds.includes(discordId)) {
           config.blacklistedIds.push(discordId);
           await fs.writeFile(configPath, JSON.stringify(config, null, 4));
-          await interaction.reply({
+          await interaction.followUp({
             content: `✅ User <@${discordId}> has been blacklisted from verifying.`,
             flags: MessageFlags.Ephemeral,
           });
         } else {
-          await interaction.reply({
+          await interaction.followUp({
             content: "❌ This user is already blacklisted.",
             flags: MessageFlags.Ephemeral,
           });
@@ -218,7 +219,7 @@ export default {
 
         const targetUser = interaction.options.getUser("user");
         if (!targetUser) {
-          await interaction.reply({
+          await interaction.followUp({
             content: "User not found.",
             flags: MessageFlags.Ephemeral,
           });
@@ -236,7 +237,7 @@ export default {
         const user = await noblox.getUserInfo(targetRobloxId);
 
         if (userData) {
-          await interaction.reply({
+          await interaction.followUp({
             content: "The user you have applied is already verified.",
           });
           return;
@@ -251,7 +252,7 @@ export default {
           robloxId: user.id,
           ranks: [],
         });
-        await interaction.reply({
+        await interaction.followUp({
           content: "User successfully added to the database.",
         });
       }
@@ -272,7 +273,7 @@ export default {
       ][];
 
       if (ticketEntries.length === 0) {
-        await interaction.reply({
+        await interaction.followUp({
           content: "No open rank request tickets found.",
           flags: MessageFlags.Ephemeral,
         });
@@ -324,7 +325,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join("\n- ")}` : "❌ No d
           .setDisabled(currentPage === totalPages - 1),
       );
 
-      const message = await interaction.reply({
+      const message = await interaction.followUp({
         embeds: [generateEmbed(currentPage)],
         components: [row],
       });
@@ -337,7 +338,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join("\n- ")}` : "❌ No d
         "collect",
         async (buttonInteraction: ButtonInteraction): Promise<void> => {
           if (buttonInteraction.user.id !== interaction.user.id) {
-            await buttonInteraction.reply({
+            await buttonInteraction.followUp({
               content: "❌ You're not allowed to use this button!",
               flags: MessageFlags.Ephemeral,
             });
