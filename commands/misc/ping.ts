@@ -6,6 +6,7 @@ export default {
     .setName("ping")
     .setDescription("Replies with Pong!"),
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.reply("Pong!");
+	const ping = interaction.client.ws.ping;
+	await interaction.reply(`Pong! ${ping}ms.`);
   },
 };

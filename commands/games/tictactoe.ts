@@ -64,13 +64,14 @@ export default {
     const message = await interaction.reply({
       content: `Tic-Tac-Toe: **${playerX.username} (❌)** vs **${playerO.username} (⭕)**`,
       components: renderBoard(board),
-      fetchReply: true,
+      withResponse: true,
     });
 
-    startGame(playerX.id, message.id, "Tic-Tac-Toe");
-    startGame(playerO.id, message.id, "Tic-Tac-Toe");
+    startGame(playerX.id, message.interaction.id, "Tic-Tac-Toe");
+    startGame(playerO.id, message.interaction.id, "Tic-Tac-Toe");
 
-    const collector = message.createMessageComponentCollector({ time: 300000 });
+    const collector = message.resource?.message?.createMessageComponentCollector({ time: 300000 });
+    if (!collector) return;
 
     collector.on("collect", async (button: ButtonInteraction) => {
       try {
@@ -98,7 +99,7 @@ export default {
         board[x][y] = symbol[currentPlayer.id] ?? null;
         if (checkWin(board, symbol[currentPlayer.id] ?? "")) {
           collector.stop("gameOver");
-          endGame(message.id);
+          endGame(message.interaction.id);
           await button.message.edit({
             content: `🎉 **${currentPlayer.username} wins!**`,
             components: renderBoard(board, true),
@@ -108,7 +109,7 @@ export default {
 
         if (board.flat().every((cell) => cell !== null)) {
           collector.stop("gameOver");
-          endGame(message.id);
+          endGame(message.interaction.id);
           await button.message.edit({
             content: "😐 It's a draw!",
             components: renderBoard(board, true),
