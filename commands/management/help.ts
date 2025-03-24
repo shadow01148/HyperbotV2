@@ -60,7 +60,6 @@ export default {
         const message = await interaction.reply({
             embeds: [generateEmbed(currentPage)],
             components: [row],
-            fetchReply: true
         });
 
         const collector = message.createMessageComponentCollector({ time: 60000 });

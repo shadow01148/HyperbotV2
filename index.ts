@@ -7,6 +7,8 @@ import {
   Collection,
   MessageFlags,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
+  EmbedBuilder,
+  TextChannel,
 } from "discord.js";
 import { token, mongoDBConnection } from "./config.json";
 import { promises as fs } from "fs";
@@ -30,6 +32,7 @@ const client: ExtendedClient = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessageReactions,
   ],
 }) as ExtendedClient;
 
@@ -90,11 +93,31 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 });
 
-client.once(Events.MessageCreate, async (message) => {
-  const channelId = "1353535051626844201";
-  if (message.channel.id === channelId) {
-    await message.react("👍");
+client.on(Events.MessageCreate, async (message) => {
+  const contestCreationsId = "1353535051626844201";
+  const contestSubmissionsId = "1353572359340294266";
+  if (message.channel.id === contestCreationsId) {
+    await message.react("👍")
     await message.react("👎");
+  }
+  if (message.channel.id === contestSubmissionsId) {
+    if (!message.guild) return;
+    const channel = message.guild.channels.cache.get(contestCreationsId);
+    const embed: EmbedBuilder = new EmbedBuilder()
+        .setColor("#0099ff")
+        .setTitle("Submission")
+        .setDescription(message.content)
+        .setFooter({
+            text: `Submitted by ${message.author.tag}`,
+            iconURL: message.author.displayAvatarURL(),
+        })
+        // set multiple images if there are multiple attachments
+        .setImage(message.attachments.first()?.url || "")
+        .setTimestamp();
+
+    if (channel && channel.type === 0) {
+        await (channel as TextChannel).send({ embeds: [embed] });
+    }
   }
 });
 
