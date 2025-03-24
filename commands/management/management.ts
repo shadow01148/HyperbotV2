@@ -8,6 +8,7 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
   ButtonInteraction,
+  TextChannel,
 } from "discord.js";
 import { promises as fs } from "fs";
 import path from "path";
@@ -15,6 +16,7 @@ import noblox from "noblox.js";
 import { MongoClient, ObjectId } from "mongodb";
 import { mongoDBConnection } from "../../config.json";
 import logger from "../../utils/logger";
+import { HttpClient } from "../../utils/httpsHandler";
 
 const client = new MongoClient(mongoDBConnection, {});
 
@@ -26,11 +28,48 @@ interface TicketData {
   downvoteCount: number;
 }
 
+interface ServerResponse {
+    data: { id: string, name: string, accessCode: string }[];
+}
+
 export default {
   data: new SlashCommandBuilder()
     .setName("manage")
     .setDescription("Management commands")
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .addSubcommandGroup((group) =>
+        group
+            .setName("vips")
+            .setDescription("VIP related commands")
+            .addSubcommand((subcommand) =>
+                subcommand
+                    .setName("reload")
+                    .setDescription("Reloads the VIP servers."),
+            ),
+        )
+    .addSubcommandGroup((group) =>
+        group
+            .setName("contest")
+            .setDescription("Contest related commands")
+            .addSubcommand((subcommand) =>
+                subcommand
+                  .setName("top")
+                  .setDescription("Displays the top upvoted contest entries."),
+              ),
+            )
+    .addSubcommandGroup((group) =>
+        group
+            .setName("hof")
+            .setDescription("Hall of Fame related commands")
+            .addSubcommand((subcommand) =>
+                subcommand
+                .setName("add")
+                .setDescription("Add a message to the Hall of Fame.")
+                .addStringOption((option) =>
+                option.setName("messageid").setDescription("Select a message ID"),
+            ),
+        )
+    )
     .addSubcommandGroup((group) =>
       group
         .setName("roles")
@@ -95,12 +134,203 @@ export default {
                 .setDescription("Specify a roblox ID to allocate the user to.")
                 .setRequired(true),
             ),
-        ),
+        )
     ),
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
+
+    if (subcommandGroup === "contest" && subcommand === "top") {
+            if (!interaction.guild) return;
+            const creationsPerPage = 5;
+            let currentPage = 0;
+            const channel = interaction.guild.channels.cache.get("1353535051626844201");
+        
+            if (!channel || channel.type !== 0) return;
+        
+            const messages = await (channel as TextChannel).messages.fetch({
+              limit: 100,
+            });
+            let embeds = messages
+              .filter((msg) => msg.embeds.length > 0)
+              .map((msg) => {
+                const embed = msg.embeds[0];
+                const footerText = embed.footer?.text || "";
+                // extract likes and dislikes from the message reactions :like:
+                const likes = msg.reactions.cache.get("👍")?.count || 0;
+                const dislikes = msg.reactions.cache.get("👎")?.count || 0;
+                const score = likes - dislikes;
+                return { embed, likes, dislikes, score, msgLink: msg.url };
+              });
+        
+            // Sort entries by highest score (Likes - Dislikes)
+            embeds.sort((a, b) => b.score - a.score);
+        
+            const maxPages = Math.max(
+              Math.ceil(embeds.length / creationsPerPage) - 1,
+              0,
+            );
+        
+            const generateEmbed = (page: number) => {
+              const start = page * creationsPerPage;
+              const end = start + creationsPerPage;
+              const entries = embeds.slice(start, end);
+        
+              const embed = new EmbedBuilder()
+                .setTitle("🏆 Contest Entries")
+                .setColor("#00ff88") // Light green
+                .setFooter({ text: `Page ${page + 1} of ${maxPages + 1}` });
+        
+              if (entries.length === 0) {
+                embed.setDescription("No entries found.");
+              } else {
+                entries.forEach((entry, index) => {
+                  embed.addFields({
+                    name: `#${start + index + 1}`,
+                    value: `${entry.embed.description || "*No description*"}\n🔗 [View Entry](${entry.msgLink})\n🔼 : **${entry.likes}** - 🔽 : **${entry.dislikes}** | (Score: **${entry.score}**)`,
+                  });
+                });
+              }
+        
+              return embed;
+            };
+        
+            const getButtons = () =>
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                  .setCustomId("prev")
+                  .setLabel("Previous")
+                  .setStyle(ButtonStyle.Primary)
+                  .setDisabled(currentPage === 0),
+                new ButtonBuilder()
+                  .setCustomId("next")
+                  .setLabel("Next")
+                  .setStyle(ButtonStyle.Primary)
+                  .setDisabled(currentPage >= maxPages),
+              );
+        
+            const message = await interaction.reply({
+              embeds: [generateEmbed(currentPage)],
+              components: [getButtons()],
+              fetchReply: true,
+            });
+        
+            const collector = message.createMessageComponentCollector({ time: 60000 });
+        
+            collector.on("collect", async (button) => {
+              if (button.user.id !== interaction.user.id) return;
+        
+              if (button.customId === "prev" && currentPage > 0) {
+                currentPage--;
+              } else if (button.customId === "next" && currentPage < maxPages) {
+                currentPage++;
+              }
+        
+              await button.update({
+                embeds: [generateEmbed(currentPage)],
+                components: [getButtons()],
+              });
+            });
+        }
+        
+
+    if (subcommandGroup === "hof" && subcommand === "add") {
+        const creationsChannelId = "1353572359340294266";
+        const creationsChannel = await interaction.guild?.channels.fetch(creationsChannelId);
+        const hofChannelId = "1353627970962722877";
+        const hofChannel = await interaction.guild?.channels.fetch(hofChannelId);
+        if (!hofChannel) return;
+        const messageId = interaction.options.getString("messageid");
+        if (!messageId) {
+          await interaction.reply("Message ID is required.");
+          return;
+        }
+        if (creationsChannel && creationsChannel.type === 0) {
+          const message = await creationsChannel?.messages.fetch(messageId);
+          if (!message) {
+            await interaction.reply("Message not found.");
+            return;
+          }
+          const reactions = message.reactions.cache;
+          const upvotes = reactions.get("👍")?.count || 0;
+          const downvotes = reactions.get("👎")?.count || 0;
+    
+          // get images from the message
+          const images = message.attachments.map((attachment) => attachment.url);
+          if (images.length === 0) {
+            await interaction.reply("Message does not have any images.");
+            return;
+          }
+          const embed = new EmbedBuilder()
+            .setAuthor({
+              name: message.author.tag,
+              iconURL: message.author.displayAvatarURL(),
+            })
+            .setDescription("Should this creation be added to the Hall of Fame?")
+            .setImage(images[0]);
+          if (hofChannel && hofChannel.type === 0) {
+            const sendMessage = await hofChannel.send({ embeds: [embed] });
+            await sendMessage.react("👍");
+            await sendMessage.react("👎");
+          }
+          await interaction.reply(
+            "Message added to the Hall of Fame voting channel.",
+          );
+        }
+    }
+
+    if (subcommandGroup === "vips" && subcommand === "reload") {
+        try {
+            const data = await fs.readFile("config.json", "utf8");
+            const config = JSON.parse(data);
+    
+            const serverAccessCodes = [];
+            const serverIds = [];
+            const servers = await HttpClient.get<ServerResponse>("https://games.roblox.com/v1/games/166986752/private-servers", { headers: { Authorization: `Bearer ${config.ROBLOSECURITY}` }})
+            if (servers.data.length > 0) {
+                for (const server of servers.data) {
+                    if (server.name.includes("VIP") || server.name.includes("EXP")) {
+                        serverAccessCodes.push(server.accessCode);
+                        serverIds.push(server.id);
+                    }
+                }
+            }
+            
+            for (const serverId of serverIds) {
+                const response = await HttpClient.patch<{ status: number, joinCode: string }>(`https://games.roblox.com/v1/private-servers/${serverId}`, {
+                    newJoinCode: true,
+                }, {
+                    headers: { Authorization: `Bearer ${config.ROBLOSECURITY}` }
+                });
+                if (response.status !== 200) {
+                    logger.error(`Failed to refresh VIP server link for server ${serverId}`);
+                }
+                const file = await fs.readFile("config.json", "utf8");
+                const updatedConfig = JSON.parse(file);
+                if (serverAccessCodes[0] === response.joinCode) {
+                    updatedConfig.servers.vipLink1 = `https://roblox.com/share?code=${response.joinCode}&type=Server`;
+                } else if (serverAccessCodes[1] === response.joinCode) {
+                    updatedConfig.servers.vipLink2 = `https://roblox.com/share?code=${response.joinCode}&type=Server`;
+                } else if (serverAccessCodes[2] === response.joinCode) {
+                    updatedConfig.servers.expertLink1 = `https://roblox.com/share?code=${response.joinCode}&type=Server`;
+                } else if (serverAccessCodes[3] === response.joinCode) {
+                    updatedConfig.servers.expertLink2 = `https://roblox.com/share?code=${response.joinCode}&type=Server`;
+                }
+                await fs.writeFile("config.json", JSON.stringify(updatedConfig, null, 2));
+            }
+            await interaction.reply({
+              content: `VIP server links refreshed!`,
+              flags: MessageFlags.Ephemeral,
+            });
+          } catch (error) {
+            logger.error("Error refreshing VIP server links:", error);
+            await interaction.reply({
+              content: `An error occurred while refreshing VIP server links.`,
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+    }
 
     if (subcommand === "roles" && subcommandGroup === "show") {
       if (!interaction.guild) return;
