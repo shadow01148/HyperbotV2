@@ -1,17 +1,17 @@
 {
-    "token": "DISCORD_TOKEN",
-    "verifyRole": "VERIFY_ROLE_ID",
-    "rankedRole": "RANKED_ROLE_ID",
-    "moderatorRole": "MODERATOR_ID",
-    "mongoDBConnection": "MONGODB_SRV_STRING",
-    "ROBLOSECURITY": "ROBLOX_TOKEN",
-    "servers": {
-      "vipLink1": "your-vip-link-1-goes-here",
-      "vipLink2": "your-vip-link-2-goes-here",
-      "expertLink1": "your-expert-link-1-goes-here",
-      "expertLink2": "your-expert-link-2-goes-here"
-    },
-    "ticketCount": 0,
-    "ticketCategoryId": "TICKET_CATEGORY_ID",
-    "blacklistedIds": []
-  }
+  "token": "DISCORD_TOKEN",
+  "verifyRole": "VERIFY_ROLE_ID",
+  "rankedRole": "RANKED_ROLE_ID",
+  "moderatorRole": "MODERATOR_ID",
+  "mongoDBConnection": "MONGODB_SRV_STRING",
+  "ROBLOSECURITY": "ROBLOX_TOKEN",
+  "servers": {
+    "vipLink1": "your-vip-link-1-goes-here",
+    "vipLink2": "your-vip-link-2-goes-here",
+    "expertLink1": "your-expert-link-1-goes-here",
+    "expertLink2": "your-expert-link-2-goes-here"
+  },
+  "ticketCount": 0,
+  "ticketCategoryId": "TICKET_CATEGORY_ID",
+  "blacklistedIds": []
+}

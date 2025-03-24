@@ -1,22 +1,37 @@
-import { SlashCommandBuilder, MessageFlags, ChatInputCommandInteraction } from 'discord.js';
-import { rankedRole, servers } from '../../config.json';
+import {
+  SlashCommandBuilder,
+  MessageFlags,
+  ChatInputCommandInteraction,
+} from "discord.js";
+import { rankedRole, servers } from "../../config.json";
 
 export default {
-    data: new SlashCommandBuilder()
-        .setName('servers')
-        .setDescription('Get the list of VIP and expert servers.'),
-    async execute(interaction: ChatInputCommandInteraction) {
-        // check roles first
-        //* @type {number} The Discord user ID
-        if (!interaction.member) {
-            return await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
-        }
-        if (!('cache' in interaction.member.roles) || !interaction.member.roles.cache.has(rankedRole)) {
-            return await interaction.reply({ content: 'You are not ranked! You must be ranked to access our VIP servers.', flags: MessageFlags.Ephemeral });
-        }
-        await interaction.reply(`<@${interaction.user.id}>, Check your DMs!`);
-        // list down servers in categories with formatting
-        const serverMessage = `**PCC VIP SERVERS**
+  cooldown: 10,
+  data: new SlashCommandBuilder()
+    .setName("servers")
+    .setDescription("Get the list of VIP and expert servers."),
+  async execute(interaction: ChatInputCommandInteraction) {
+    // check roles first
+    //* @type {number} The Discord user ID
+    if (!interaction.member) {
+      return await interaction.reply({
+        content: "This command can only be used in a server.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+    if (
+      !("cache" in interaction.member.roles) ||
+      !interaction.member.roles.cache.has(rankedRole)
+    ) {
+      return await interaction.reply({
+        content:
+          "You are not ranked! You must be ranked to access our VIP servers.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+    await interaction.reply(`<@${interaction.user.id}>, Check your DMs!`);
+    // list down servers in categories with formatting
+    const serverMessage = `**PCC VIP SERVERS**
     -----------------------
     These private servers are a place where you can build without having to worry about someone potentially copying your creation! These private servers are meant for Plane Crazy Community Discord members only.
 
@@ -32,7 +47,7 @@ export default {
 
     ⚠️ Those found sharing private server links to anyone outside the PCC Discord or to unranked members will be banned.`;
 
-        await interaction.user.send(serverMessage);
-        return;
-    },
+    await interaction.user.send(serverMessage);
+    return;
+  },
 };
