@@ -97,26 +97,26 @@ client.on(Events.MessageCreate, async (message) => {
   const contestCreationsId = "1353535051626844201";
   const contestSubmissionsId = "1353572359340294266";
   if (message.channel.id === contestCreationsId) {
-    await message.react("👍")
+    await message.react("👍");
     await message.react("👎");
   }
   if (message.channel.id === contestSubmissionsId) {
     if (!message.guild) return;
     const channel = message.guild.channels.cache.get(contestCreationsId);
     const embed: EmbedBuilder = new EmbedBuilder()
-        .setColor("#0099ff")
-        .setTitle("Submission")
-        .setDescription(message.content)
-        .setFooter({
-            text: `Submitted by ${message.author.tag}`,
-            iconURL: message.author.displayAvatarURL(),
-        })
-        // set multiple images if there are multiple attachments
-        .setImage(message.attachments.first()?.url || "")
-        .setTimestamp();
+      .setColor("#0099ff")
+      .setTitle("Submission")
+      .setDescription(message.content)
+      .setFooter({
+        text: `Submitted by ${message.author.tag}`,
+        iconURL: message.author.displayAvatarURL(),
+      })
+      // set multiple images if there are multiple attachments
+      .setImage(message.attachments.first()?.url || "")
+      .setTimestamp();
 
     if (channel && channel.type === 0) {
-        await (channel as TextChannel).send({ embeds: [embed] });
+      await (channel as TextChannel).send({ embeds: [embed] });
     }
   }
 });
@@ -264,6 +264,46 @@ client.on(Events.InteractionCreate, async (interaction) => {
           content: "There was an error while executing this command!",
           flags: MessageFlags.Ephemeral,
         });
+      }
+    }
+  }
+});
+
+client.on(Events.Error, (error) => {
+  logger.error(error);
+});
+
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
+  const hofVotingChannelId = "1353627970962722877";
+  if (reaction.message.channel.id === hofVotingChannelId) {
+    if (reaction.emoji.name === "👍") {
+      const channel = reaction.message.channel;
+      if (channel.type === 0) {
+        const message = reaction.message;
+        const reactions = message.reactions.cache;
+        const upvotes = reactions.get("👍")?.count || 0;
+        const downvotes = reactions.get("👎")?.count || 0;
+        if (upvotes - downvotes >= 8) {
+          const hofChannelId = "1353627930026311681";
+          const hofChannel = message.guild?.channels.cache.get(hofChannelId);
+          if (!message.author) return;
+          const images = message.attachments.map(
+            (attachment) => attachment.url,
+          );
+          if (images.length === 0) return;
+          if (hofChannel && hofChannel.type === 0) {
+            const embed = new EmbedBuilder()
+              .setAuthor({
+                name: message.author.tag,
+                iconURL: message.author.displayAvatarURL(),
+              })
+              .setDescription(message.content)
+              .setImage(images[0])
+              .setFooter({ text: `Submitted by ${message.author.tag}` })
+              .setTimestamp();
+            await hofChannel.send({ embeds: [embed] });
+          }
+        }
       }
     }
   }
