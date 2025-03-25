@@ -11,6 +11,16 @@
     "expertLink1": "your-expert-link-1-goes-here",
     "expertLink2": "your-expert-link-2-goes-here"
   },
+  "channels": {
+    "contests": {
+      "contestCreationsId": "",
+      "contestSubmissionsId": ""
+    },
+    "hallOfFame": {
+      "hofChannelId": "",
+      "hofVotingChannelId": ""
+    }
+  },
   "ticketCount": 0,
   "ticketCategoryId": "TICKET_CATEGORY_ID",
   "blacklistedIds": []

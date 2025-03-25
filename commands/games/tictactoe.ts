@@ -13,7 +13,7 @@ import { startGame, endGame, isGameActive } from "../../utils/gameManager";
 import { start } from "repl";
 
 type Board = (string | null)[][];
-type SymbolMap = { [key: string]: string };
+type SymbolMap = Record<string, string>;;
 
 export default {
   cooldown: 5,
@@ -140,7 +140,7 @@ export default {
 
 function renderBoard(
   board: Board,
-  gameOver: boolean = false,
+  gameOver = false,
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   return board.map((row, x) => {
     const actionRow = new ActionRowBuilder<MessageActionRowComponentBuilder>();

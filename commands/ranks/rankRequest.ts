@@ -7,7 +7,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import logger from "../../utils/logger";
 
-const ticketsDataPath = path.join(__dirname, "../../ticketsData.json");
+const ticketsDataPath = path.join(process.cwd(), "ticketsData.json");
 
 interface Ticket {
   authorId: string;

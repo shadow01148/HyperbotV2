@@ -1,9 +1,8 @@
-import globals from "globals";
-import pluginJs from "@eslint/js";
+// @ts-check
 
-/** @type {import('eslint').Linter.Config[]} */
-export default [
-  { files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
-  { languageOptions: { globals: globals.browser } },
-  pluginJs.configs.recommended,
-];
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  tseslint.configs.stylistic,
+  { ignores: ['**/*.js'] },
+);

@@ -10,7 +10,7 @@ import {
   EmbedBuilder,
   TextChannel,
 } from "discord.js";
-import { token, mongoDBConnection } from "./config.json";
+import { token, mongoDBConnection,  } from "./config.json";
 import { promises as fs } from "fs";
 import path from "path";
 import { MongoClient, ObjectId } from "mongodb";
@@ -94,7 +94,6 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 client.on(Events.MessageCreate, async (message) => {
-    // Auto responses for common questions
     const imageRegex = /\b(?:send|upload|share|attach|post|submit|provide|drop)\s+(?:an?\s+)?(?:images?|photos?|pictures?|pics?|pix|screenshots?|snapshots?|files?|img(?:s|es)?|fotos?)\b/i;
     const questionRegex = /^(?:how|can|is|are|was|were|what|where|who|whom|whose|which|do|does|did|should|could|would|will|shall|has|have|had|must|am|why|when)\b/i;
     const reportRegex = /\b(?:how\s+(?:do|can|does)|where(?:\s+(?:can|do|to))?|what'?s?(?:\s+(?:the|way))?|can|is)\s+(?:i|we|one|you)\s+(?:report|file|make|submit|flag|notify)\s+(?:an?\s+)?(?:report|complaint|issue)?\s*(?:on|about|against|for)?\s*(?:a|this|that|the)?\s*(?:player|user|cheater|hacker|scammer|offender|abuser|violator|toxic\s+player|someone)\b/i;
@@ -221,7 +220,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
         );
       }
 
-      let username = await noblox.getUsernameFromId(user["robloxId"]);
+      const username = await noblox.getUsernameFromId(user["robloxId"]);
       await member.setNickname(username);
 
       logger.debug(

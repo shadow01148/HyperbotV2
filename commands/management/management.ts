@@ -137,7 +137,6 @@ export default {
         )
     ),
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
 
@@ -152,7 +151,7 @@ export default {
             const messages = await (channel as TextChannel).messages.fetch({
               limit: 100,
             });
-            let embeds = messages
+            const embeds = messages
               .filter((msg) => msg.embeds.length > 0)
               .map((msg) => {
                 const embed = msg.embeds[0];
@@ -343,7 +342,7 @@ export default {
         .setTitle(`🔖 Roles for ${targetUser.tag}`)
         .setDescription(roles.join(", "))
         .setColor("#2ECC71"); // Light green color
-      await interaction.followUp({
+      await interaction.reply({
         embeds: [embed],
         flags: MessageFlags.Ephemeral,
       });
@@ -360,11 +359,11 @@ export default {
         const discordId = targetUser.id;
 
         const userData = await collection.findOne({
-          _id: new ObjectId(discordId),
+          _id: discordId as unknown as ObjectId,
         });
 
         if (!userData) {
-          await interaction.followUp({
+          await interaction.reply({
             content: "No user found in the database.",
           });
           return;
@@ -391,50 +390,53 @@ export default {
           )
           .setTimestamp();
 
-        await interaction.followUp({
+        await interaction.reply({
           embeds: [embed],
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
       if (subcommand === "blacklist") {
-        await client.connect();
-        const database = client.db("HyperVerify");
-        const collection = database.collection("verifiedUsers");
+        try {
+          await client.connect();
+          const database = client.db("HyperVerify");
+          const collection = database.collection("verifiedUsers");
 
-        const targetUser = interaction.options.getUser("user");
-        if (!targetUser) {
-          await interaction.followUp({
-            content: "User not found.",
-            flags: MessageFlags.Ephemeral,
+          const targetUser = interaction.options.getUser("user");
+          if (!targetUser) {
+            await interaction.reply({
+              content: "User not found.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          const discordId = targetUser.id;
+
+          const userData = await collection.findOne({
+            _id: discordId as unknown as ObjectId,
           });
-          return;
-        }
-        const discordId = targetUser.id;
 
-        const userData = await collection.findOne({
-          _id: new ObjectId(discordId),
-        });
+          const configPath = path.join(process.cwd(), "config.json");
+          const config = JSON.parse(await fs.readFile(configPath, "utf8"));
 
-        if (userData) {
-          await collection.deleteOne({ _id: new ObjectId(discordId) });
-        }
-
-        const configPath = path.join(__dirname, "../../config.json");
-        const config = JSON.parse(await fs.readFile(configPath, "utf8"));
-
-        if (!config.blacklistedIds.includes(discordId)) {
-          config.blacklistedIds.push(discordId);
-          await fs.writeFile(configPath, JSON.stringify(config, null, 4));
-          await interaction.followUp({
-            content: `✅ User <@${discordId}> has been blacklisted from verifying.`,
-            flags: MessageFlags.Ephemeral,
-          });
-        } else {
-          await interaction.followUp({
-            content: "❌ This user is already blacklisted.",
-            flags: MessageFlags.Ephemeral,
-          });
+          if (!config.blacklistedIds.includes(discordId)) { 
+            if (userData) {
+              await collection.deleteOne({ _id: discordId as unknown as ObjectId });
+            }
+            config.blacklistedIds.push(discordId);
+            await fs.writeFile(configPath, JSON.stringify(config, null, 2))
+            await interaction.reply({
+              content: `✅ User <@${discordId}> has been blacklisted from verifying.`,
+              flags: MessageFlags.Ephemeral,
+            });
+          } else {
+            await interaction.reply({
+              content: "❌ This user is already blacklisted.",
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+        } catch (error) {
+          logger.error(error)
         }
       }
       if (subcommand === "manual") {
@@ -446,7 +448,7 @@ export default {
 
         const targetUser = interaction.options.getUser("user");
         if (!targetUser) {
-          await interaction.followUp({
+          await interaction.reply({
             content: "User not found.",
             flags: MessageFlags.Ephemeral,
           });
@@ -459,12 +461,12 @@ export default {
         );
 
         const userData = await collection.findOne({
-          _id: new ObjectId(discordId),
+          _id: discordId as unknown as ObjectId,
         });
         const user = await noblox.getUserInfo(targetRobloxId);
 
         if (userData) {
-          await interaction.followUp({
+          await interaction.reply({
             content: "The user you have applied is already verified.",
           });
           return;
@@ -475,20 +477,18 @@ export default {
           await member.setNickname(user.name).catch(logger.error);
         }
         await collection.insertOne({
-          _id: new ObjectId(discordId),
+          _id: discordId as unknown as ObjectId,
           robloxId: user.id,
           ranks: [],
         });
-        await interaction.followUp({
+        await interaction.reply({
           content: "User successfully added to the database.",
         });
       }
     }
     if (subcommandGroup === "rankrequest" && subcommand === "list") {
       const ticketsDataPath = path.join(
-        __dirname,
-        "..",
-        "..",
+       process.cwd(),
         "ticketsData.json",
       ); // Adjust as needed
       const ticketsData = JSON.parse(
@@ -500,7 +500,7 @@ export default {
       ][];
 
       if (ticketEntries.length === 0) {
-        await interaction.followUp({
+        await interaction.reply({
           content: "No open rank request tickets found.",
           flags: MessageFlags.Ephemeral,
         });
@@ -552,7 +552,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join("\n- ")}` : "❌ No d
           .setDisabled(currentPage === totalPages - 1),
       );
 
-      const message = await interaction.followUp({
+      const message = await interaction.reply({
         embeds: [generateEmbed(currentPage)],
         components: [row],
       });
@@ -565,7 +565,7 @@ ${ticketData.ranks.length > 0 ? `- ${ticketData.ranks.join("\n- ")}` : "❌ No d
         "collect",
         async (buttonInteraction: ButtonInteraction): Promise<void> => {
           if (buttonInteraction.user.id !== interaction.user.id) {
-            await buttonInteraction.followUp({
+            await buttonInteraction.reply({
               content: "❌ You're not allowed to use this button!",
               flags: MessageFlags.Ephemeral,
             });

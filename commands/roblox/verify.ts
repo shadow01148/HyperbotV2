@@ -82,13 +82,12 @@ export default {
       return;
     }
 
-    var message = await interaction.reply({ content: "Hold Tight..." });
+    const message = await interaction.reply({ content: "Hold Tight..." });
 
     const id = await noblox.getIdFromUsername(username);
 
     const discordId = interaction.user.id;
-    // eslint-disable-next-line no-undef
-    const configPath = path.join(__dirname, "../../config.json");
+    const configPath = path.join(process.cwd(), "config.json");
     const config = JSON.parse(await fs.readFile(configPath, "utf8"));
 
     if (config.blacklistedIds.includes(discordId)) {
