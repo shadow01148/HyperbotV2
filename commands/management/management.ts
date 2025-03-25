@@ -119,6 +119,19 @@ export default {
             ),
         )
         .addSubcommand((subcommand) =>
+          subcommand 
+            .setName("unblacklist")
+            .setDescription(
+              "Blacklists a user from verifying, and deletes their entry in the database if it exists.",
+            )
+            .addUserOption((user) =>
+              user
+                .setName("user")
+                .setDescription("Select a user.")
+                .setRequired(true),
+            ),
+          )
+        .addSubcommand((subcommand) =>
           subcommand
             .setName("manual")
             .setDescription("Manually verifies a user.")
@@ -248,10 +261,6 @@ export default {
             await interaction.reply("Message not found.");
             return;
           }
-          const reactions = message.reactions.cache;
-          const upvotes = reactions.get("👍")?.count || 0;
-          const downvotes = reactions.get("👎")?.count || 0;
-    
           // get images from the message
           const images = message.attachments.map((attachment) => attachment.url);
           if (images.length === 0) {
@@ -328,8 +337,11 @@ export default {
           }
     }
 
-    if (subcommand === "roles" && subcommandGroup === "show") {
-      if (!interaction.guild) return;
+    if (subcommandGroup === "roles" && subcommand === "show") {
+      if (!interaction.guild) {
+        logger.debug("This ran")
+        return;
+      }
       const targetUser =
         interaction.options.getUser("user") || interaction.user;
       const member = await interaction.guild.members.fetch(targetUser.id);
@@ -439,6 +451,45 @@ export default {
           logger.error(error)
         }
       }
+      if (subcommand === "unblacklist") {
+        try {
+          await client.connect();
+          const database = client.db("HyperVerify");
+          const collection = database.collection("verifiedUsers");
+      
+          const targetUser = interaction.options.getUser("user");
+          if (!targetUser) {
+            await interaction.reply({
+              content: "User not found.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          const discordId = targetUser.id;
+      
+          const configPath = path.join(process.cwd(), "config.json");
+          const config = JSON.parse(await fs.readFile(configPath, "utf8"));
+      
+          // Check if the user is in the blacklist
+          if (config.blacklistedIds.includes(discordId)) {
+            // Remove the user from the blacklist
+            config.blacklistedIds = config.blacklistedIds.filter((id: string) => id !== discordId);
+            await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+      
+            await interaction.reply({
+              content: `✅ User <@${discordId}> has been **removed** from the blacklist.`,
+              flags: MessageFlags.Ephemeral,
+            });
+          } else {
+            await interaction.reply({
+              content: "❌ This user is **not** blacklisted.",
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+        } catch (error) {
+          logger.error(error);
+        }
+      }      
       if (subcommand === "manual") {
         if (!interaction.guild) return;
         if (!interaction.member) return;
