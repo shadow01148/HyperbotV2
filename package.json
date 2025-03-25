@@ -2,25 +2,34 @@
   "name": "hyperbotv2",
   "version": "1.0.0",
   "description": "A Discord bot with advanced features",
-  "main": "index.js",
+  "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "lint": "eslint ."
+    "build": "tsc",
+    "start": "rimraf dist && tsc && node dist/index.js",
+    "dev": "nodemon --ext ts --exec node --loader ts-node/esm src/index.ts",
+    "lint": "eslint . --ext .ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.8.4",
     "discord.js": "^14.18.0",
     "mongodb": "^6.14.2",
-    "noblox.js": "^6.1.1"
+    "noblox.js": "^6.1.1",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@types/node": "^22.13.11",
     "eslint": "^9.22.0",
     "globals": "^16.0.0",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "prettier": "3.5.3",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
   },
   "engines": {
     "node": ">=18.0.0"
