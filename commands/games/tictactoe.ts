@@ -99,7 +99,8 @@ export default {
         board[x][y] = symbol[currentPlayer.id] ?? null;
         if (checkWin(board, symbol[currentPlayer.id] ?? "")) {
           collector.stop("gameOver");
-          endGame(message.interaction.id);
+          endGame(playerO.id);
+          endGame(playerX.id);
           await button.message.edit({
             content: `🎉 **${currentPlayer.username} wins!**`,
             components: renderBoard(board, true),
@@ -109,7 +110,8 @@ export default {
 
         if (board.flat().every((cell) => cell !== null)) {
           collector.stop("gameOver");
-          endGame(message.interaction.id);
+          endGame(playerO.id);
+          endGame(playerX.id);
           await button.message.edit({
             content: "😐 It's a draw!",
             components: renderBoard(board, true),

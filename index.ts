@@ -261,9 +261,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (now < expirationTime) {
       const expiredTimestamp = Math.round(expirationTime / 1_000);
-      await interaction.editReply({
-        content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-      });
+      // check if a message has been sent already
+      if (!interaction.replied) {
+        await interaction.reply({
+          content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+        })
+      } else {
+        await interaction.editReply({
+          content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+        });
+      }
     }
   }
 

@@ -156,15 +156,12 @@ export default {
               .filter((msg) => msg.embeds.length > 0)
               .map((msg) => {
                 const embed = msg.embeds[0];
-                const footerText = embed.footer?.text || "";
-                // extract likes and dislikes from the message reactions :like:
                 const likes = msg.reactions.cache.get("👍")?.count || 0;
                 const dislikes = msg.reactions.cache.get("👎")?.count || 0;
                 const score = likes - dislikes;
                 return { embed, likes, dislikes, score, msgLink: msg.url };
               });
         
-            // Sort entries by highest score (Likes - Dislikes)
             embeds.sort((a, b) => b.score - a.score);
         
             const maxPages = Math.max(
@@ -213,10 +210,10 @@ export default {
             const message = await interaction.reply({
               embeds: [generateEmbed(currentPage)],
               components: [getButtons()],
-              fetchReply: true,
+              withResponse: true,
             });
-        
-            const collector = message.createMessageComponentCollector({ time: 60000 });
+            if (!message.resource?.message) return;
+            const collector = message.resource?.message.createMessageComponentCollector({ time: 60000 });
         
             collector.on("collect", async (button) => {
               if (button.user.id !== interaction.user.id) return;

@@ -17,7 +17,6 @@ export default {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
     const user = interaction.options.getUser("target") || interaction.user;
     if (!interaction.guild) return;
     const member = await interaction.guild.members.fetch(user.id);
@@ -47,6 +46,6 @@ export default {
       })
       .setTimestamp();
 
-    await interaction.followUp({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };

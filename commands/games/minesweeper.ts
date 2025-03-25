@@ -73,7 +73,7 @@ export default {
             components: renderBoard(board, revealed, size, true),
           });
           collector.stop("gameOver");
-          endGame(reply.id);
+          endGame(userId);
         } else {
           reveal(board, revealed, row, col, size);
           await button.message.edit({
