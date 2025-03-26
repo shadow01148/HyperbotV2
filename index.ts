@@ -16,6 +16,9 @@ import path from "path";
 import { MongoClient, ObjectId } from "mongodb";
 import noblox from "noblox.js";
 import logger from "./utils/logger";
+import moment from "moment-timezone";
+
+const validTimezones = moment.tz.names();
 
 interface ExtendedClient extends Client {
   commands: Collection<string, any>;
@@ -24,7 +27,7 @@ interface ExtendedClient extends Client {
 
 const mongoClient = new MongoClient(mongoDBConnection, {});
 
-const client: ExtendedClient = new Client({
+export const client: ExtendedClient = new Client({
   intents: [
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.Guilds,
@@ -240,6 +243,21 @@ client.on(Events.GuildMemberAdd, async (member) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isAutocomplete()) {
+    const focusedOption = interaction.options.getFocused(true);
+    let choices: string[] = [];
+
+    if (focusedOption.name === "timezone") {
+        choices = validTimezones
+            .filter(tz => tz.toLowerCase().includes(focusedOption.value.toLowerCase())) // Keep all matches
+            .slice(0, 25);
+    }
+
+    // Respond with the best-matching choices
+    await interaction.respond(choices.map(choice => ({ name: choice, value: choice })));
+}
+
+
   if (!interaction.isChatInputCommand()) return;
   const { cooldowns } = interaction.client as ExtendedClient;
 
@@ -247,7 +265,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!command) return;
 
   if (!cooldowns.has(command.data.name)) {
-    cooldowns.set(command.data.name, new Collection());
+      cooldowns.set(command.data.name, new Collection());
   }
 
   const now = Date.now();
@@ -256,49 +274,45 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const cooldownAmount = (command.cooldown ?? defaultCooldownDuration) * 1_000;
 
   if (timestamps.has(interaction.user.id)) {
-    const expirationTime = timestamps.get(interaction.user.id) + cooldownAmount;
+      const expirationTime = timestamps.get(interaction.user.id) + cooldownAmount;
 
-    if (now < expirationTime) {
-      const expiredTimestamp = Math.round(expirationTime / 1_000);
-      // check if a message has been sent already
-      if (!interaction.replied) {
-        await interaction.reply({
-          content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-        })
-      } else {
-        await interaction.editReply({
-          content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-        });
+      if (now < expirationTime) {
+          const expiredTimestamp = Math.round(expirationTime / 1_000);
+          if (!interaction.replied) {
+              await interaction.reply({
+                  content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+              });
+          } else {
+              await interaction.editReply({
+                  content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+              });
+          }
+          return;
       }
-    }
   }
 
   timestamps.set(interaction.user.id, now);
   setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
 
   if (!command) {
-    logger.error(`No command matching ${interaction.commandName} was found.`);
-    return;
+      logger.error(`No command matching ${interaction.commandName} was found.`);
+      return;
   }
-  if (interaction) {
-    try {
+
+  try {
       await command.execute(interaction);
-    } catch (error) {
+  } catch (error) {
       logger.error(error);
+      const errorMessage = "There was an error while executing this command!";
       if (interaction.replied || interaction.deferred) {
-        await interaction.reply({
-          content: "There was an error while executing this command!",
-          flags: MessageFlags.Ephemeral,
-        });
+          await interaction.editReply({ content: errorMessage });
       } else {
-        await interaction.reply({
-          content: "There was an error while executing this command!",
-          flags: MessageFlags.Ephemeral,
-        });
+          await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
       }
-    }
   }
 });
+
+
 
 client.on(Events.Error, (error) => {
   logger.error(error);

@@ -8,7 +8,7 @@ import {
   ChatInputCommandInteraction,
 } from "discord.js";
 import {
-  verifyRole,
+  roles,
   mongoDBConnection,
   ROBLOSECURITY,
 } from "../../config.json";
@@ -19,6 +19,7 @@ import path from "path";
 import logger from "../../utils/logger";
 
 const client = new MongoClient(mongoDBConnection, {});
+const verifyRole = roles.verifyRole
 
 function generateVerificationCode() {
   const words = [

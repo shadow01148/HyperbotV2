@@ -3,7 +3,9 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
 } from "discord.js";
-import { rankedRole, servers } from "../../config.json";
+import { roles, servers } from "../../config.json";
+
+const rankedRole = roles.rankedRole
 
 export default {
   cooldown: 10,
