@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "start": "rimraf dist && tsc && node dist/index.js",
     "dev": "nodemon --ext ts --exec node --loader ts-node/esm src/index.ts",
     "lint": "eslint . --ext .ts"

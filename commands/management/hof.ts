@@ -4,6 +4,7 @@ import {
     PermissionFlagsBits,
     ChatInputCommandInteraction,
 } from "discord.js";
+import config from "../../config.json"
 
 export default {
     data: new SlashCommandBuilder()
@@ -19,9 +20,9 @@ export default {
                 ),
         ),
     async execute(interaction: ChatInputCommandInteraction) {
-        const creationsChannelId = "1353572359340294266";
+        const creationsChannelId = config.channels.hallOfFame.hofVotingChannelId;
         const creationsChannel = await interaction.guild?.channels.fetch(creationsChannelId);
-        const hofChannelId = "1353627970962722877";
+        const hofChannelId = config.channels.hallOfFame.hofChannelId;
         const hofChannel = await interaction.guild?.channels.fetch(hofChannelId);
         if (!hofChannel) return;
         const messageId = interaction.options.getString("messageid");

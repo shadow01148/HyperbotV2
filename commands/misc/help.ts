@@ -39,8 +39,23 @@ export default {
         .setFooter({ text: `Page ${page + 1} of ${totalPages}` })
         .setDescription(
           commandList
-            .map((cmd) => `**/${cmd.data.name}** - ${cmd.data.description}`)
-            .join("\n") || "No commands found.",
+            .map((cmd) => {
+              const commandID = interaction.client.application?.commands.cache.find(c => c.name === cmd.data.name)?.id;
+              if (!commandID) return `**/${cmd.data.name}** - ${cmd.data.description}`;
+              
+              if (cmd.data.options?.length) {
+                return cmd.data.options.map((option: { type: number; name: any; description: any; options: any[]; }) => {
+                  if (option.type === 1) { // Subcommand
+                    return `</${cmd.data.name} ${option.name}:${commandID}> - ${option.description}`;
+                  } else if (option.type === 2) { // Subcommand Group
+                    return option.options?.map((sub: { name: any; description: any; }) => `</${cmd.data.name} ${option.name} ${sub.name}:${commandID}> - ${sub.description}`).join("\n") || "";
+                  }
+                  return `</${cmd.data.name}:${commandID}> - ${cmd.data.description}`;
+                }).join("\n");
+              }
+              return `</${cmd.data.name}:${commandID}> - ${cmd.data.description}`;
+            })
+            .join("\n") || "No commands found."
         );
     };
 
@@ -54,7 +69,7 @@ export default {
         .setCustomId("next")
         .setLabel("Next")
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(currentPage === totalPages - 1),
+        .setDisabled(currentPage === totalPages - 1)
     );
 
     const message = await interaction.reply({
@@ -72,8 +87,7 @@ export default {
         });
       }
 
-      if (buttonInteraction.customId === "prev" && currentPage > 0)
-        currentPage--;
+      if (buttonInteraction.customId === "prev" && currentPage > 0) currentPage--;
       else if (
         buttonInteraction.customId === "next" &&
         currentPage < totalPages - 1
@@ -93,7 +107,7 @@ export default {
               .setCustomId("next")
               .setLabel("Next")
               .setStyle(ButtonStyle.Primary)
-              .setDisabled(currentPage === totalPages - 1),
+              .setDisabled(currentPage === totalPages - 1)
           ),
         ],
       });

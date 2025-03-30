@@ -1,3 +1,13 @@
+/**
+ * 
+ * Hyperbot V2
+ * 
+ * Built by the community, for the community. I wish you'd just listen.
+ * 
+ * © Robert Ancker 2025
+ * 
+**/
+
 import {
   REST,
   Routes,
@@ -9,8 +19,9 @@ import {
   RESTPostAPIChatInputApplicationCommandsJSONBody,
   EmbedBuilder,
   TextChannel,
+  AuditLogEvent,
 } from "discord.js";
-import { token, mongoDBConnection,  } from "./config.json";
+import config from "./config.json";
 import { promises as fs } from "fs";
 import path from "path";
 import { MongoClient, ObjectId } from "mongodb";
@@ -25,7 +36,7 @@ interface ExtendedClient extends Client {
   cooldowns: Collection<string, any>;
 }
 
-const mongoClient = new MongoClient(mongoDBConnection, {});
+const mongoClient = new MongoClient(config.mongoDBConnection, {});
 
 export const client: ExtendedClient = new Client({
   intents: [
@@ -84,7 +95,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   logger.info(`Ready! Logged in as ${readyClient.user.tag}`);
 
   // Register commands after client is ready
-  const rest = new REST().setToken(token);
+  const rest = new REST().setToken(config.token);
   try {
     logger.info("Started refreshing application (/) commands.");
 
@@ -97,6 +108,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 client.on(Events.MessageCreate, async (message) => {
+  // CARLBOT AUTORESPONSES -> HYPERBOT AUTORESPONSES.
     const imageRegex = /\b(?:send|upload|share|attach|post|submit|provide|drop)\s+(?:an?\s+)?(?:images?|photos?|pictures?|pics?|pix|screenshots?|snapshots?|files?|img(?:s|es)?|fotos?)\b/i;
     const questionRegex = /^(?:how|can|is|are|was|were|what|where|who|whom|whose|which|do|does|did|should|could|would|will|shall|has|have|had|must|am|why|when)\b/i;
     const reportRegex = /\b(?:how\s+(?:do|can|does)|where(?:\s+(?:can|do|to))?|what'?s?(?:\s+(?:the|way))?|can|is)\s+(?:i|we|one|you)\s+(?:report|file|make|submit|flag|notify)\s+(?:an?\s+)?(?:report|complaint|issue)?\s*(?:on|about|against|for)?\s*(?:a|this|that|the)?\s*(?:player|user|cheater|hacker|scammer|offender|abuser|violator|toxic\s+player|someone)\b/i;
@@ -110,6 +122,11 @@ client.on(Events.MessageCreate, async (message) => {
     if (questionRegex.test(message.content) && imageRegex.test(message.content)) {
         await message.reply("A user can only upload images in #general if they are:\n- Expert Ranked\n. If you do not have the Expert rank, you can upload images in any other channel if you have:\n- Level 3 in MEE6");
     }
+  // NOTES FOR DEPRECATION, dont need anything specific!
+  if (message.content.startsWith("-verify") || message.content.startsWith("-reverify")) {
+    await message.reply("Please use </verify:1355183171511128333> from now on. Any commands starting with `-` is deprecated in favor of **Slash Commands**. Find your equivalent commands by using our </help:1355183171364458720> command!")
+  }
+
 // ANYTHING AFTER THIS LINE IS RELATED TO CONTESTS.
   const contestCreationsId = "1353535051626844201";
   const contestSubmissionsId = "1353572359340294266";
@@ -149,6 +166,25 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 client.on(Events.GuildMemberRemove, async (member) => {
+  const channel = member.guild.channels.cache.get("1352877273094819962");
+  if (!channel?.isTextBased() || !channel?.isSendable()) return;
+
+  try {
+    const auditLogs = await member.guild.fetchAuditLogs({
+      type: AuditLogEvent.MemberBanAdd,
+      limit: 1,
+    });
+
+    const latestBan = auditLogs.entries.first();
+    if (latestBan && latestBan.target && latestBan.target.id === member.user.id) {
+      await channel.send({
+        content: `🔨 **${member.user.username}**`,
+        files: ['./jail.mp4']
+      });
+    }
+  } catch (error) {
+    console.error("Failed to check ban status:", error);
+  }
   try {
     const database = mongoClient.db("HyperVerify");
     const collection = database.collection("verifiedUsers");
@@ -242,6 +278,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
   }
 });
 
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isAutocomplete()) {
     const focusedOption = interaction.options.getFocused(true);
@@ -319,7 +356,7 @@ client.on(Events.Error, (error) => {
 });
 
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
-  const hofVotingChannelId = "1353627970962722877";
+  const hofVotingChannelId = config.channels.hallOfFame.hofVotingChannelId;
   if (reaction.message.channel.id === hofVotingChannelId) {
     if (reaction.emoji.name === "👍") {
       const channel = reaction.message.channel;
@@ -329,8 +366,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
         const upvotes = reactions.get("👍")?.count || 0;
         const downvotes = reactions.get("👎")?.count || 0;
         if (upvotes - downvotes >= 8) {
-          const hofChannelId = "1353627930026311681";
-          const hofChannel = message.guild?.channels.cache.get(hofChannelId);
+          const hofChannel = message.guild?.channels.cache.get(config.channels.hallOfFame.hofChannelId);
           if (!message.author) return;
           const images = message.attachments.map(
             (attachment) => attachment.url,
@@ -354,4 +390,4 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   }
 });
 
-client.login(token);
+client.login(config.token);
