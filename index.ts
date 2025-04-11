@@ -56,6 +56,7 @@ client.cooldowns = new Collection();
 // Load commands
 const commands: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 const foldersPath = path.join(__dirname, "commands");
+
 async function loadCommands() {
   try {
     const commandFolders = await fs.readdir(foldersPath);
@@ -71,12 +72,7 @@ async function loadCommands() {
 
         if (command.default?.data && command.default?.execute) {
           client.commands.set(command.default.data.name, command.default);
-          // debug
-          logger.debug(`Command loaded: ${command.default.data.name}`);
-          logger.debug(`Command path: ${filePath}`);
-          logger.debug(`Command data:`, command.default.data.toJSON());
-          logger.debug(`Command execute:`, command.default.execute);
-          commands.push(command.default.data.toJSON()); // Add this line to register the command
+          commands.push(command.default.data.toJSON());
         } else {
           logger.warn(
             `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
