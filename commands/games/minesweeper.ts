@@ -131,7 +131,7 @@ function renderBoard(
   board: Board,
   revealed: RevealedBoard,
   size: number,
-  gameOver: boolean = false,
+  gameOver = false,
 ): ActionRowBuilder<ButtonBuilder>[] {
   const rows: ActionRowBuilder<ButtonBuilder>[] = [];
 

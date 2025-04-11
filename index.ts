@@ -1,3 +1,13 @@
+/**
+ * 
+ * Hyperbot V2
+ * 
+ * Built by the community, for the community. I wish you'd just listen.
+ * 
+ * © Robert Ancker 2025
+ * 
+**/
+
 import {
   REST,
   Routes,
@@ -9,22 +19,26 @@ import {
   RESTPostAPIChatInputApplicationCommandsJSONBody,
   EmbedBuilder,
   TextChannel,
+  AuditLogEvent,
 } from "discord.js";
-import { token, mongoDBConnection } from "./config.json";
+import config from "./config.json";
 import { promises as fs } from "fs";
 import path from "path";
 import { MongoClient, ObjectId } from "mongodb";
 import noblox from "noblox.js";
 import logger from "./utils/logger";
+import moment from "moment-timezone";
+
+const validTimezones = moment.tz.names();
 
 interface ExtendedClient extends Client {
   commands: Collection<string, any>;
   cooldowns: Collection<string, any>;
 }
 
-const mongoClient = new MongoClient(mongoDBConnection, {});
+const mongoClient = new MongoClient(config.mongoDBConnection, {});
 
-const client: ExtendedClient = new Client({
+export const client: ExtendedClient = new Client({
   intents: [
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.Guilds,
@@ -42,6 +56,7 @@ client.cooldowns = new Collection();
 // Load commands
 const commands: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
 const foldersPath = path.join(__dirname, "commands");
+
 async function loadCommands() {
   try {
     const commandFolders = await fs.readdir(foldersPath);
@@ -57,12 +72,7 @@ async function loadCommands() {
 
         if (command.default?.data && command.default?.execute) {
           client.commands.set(command.default.data.name, command.default);
-          // debug
-          logger.debug(`Command loaded: ${command.default.data.name}`);
-          logger.debug(`Command path: ${filePath}`);
-          logger.debug(`Command data:`, command.default.data.toJSON());
-          logger.debug(`Command execute:`, command.default.execute);
-          commands.push(command.default.data.toJSON()); // Add this line to register the command
+          commands.push(command.default.data.toJSON());
         } else {
           logger.warn(
             `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
@@ -81,7 +91,7 @@ client.once(Events.ClientReady, async (readyClient) => {
   logger.info(`Ready! Logged in as ${readyClient.user.tag}`);
 
   // Register commands after client is ready
-  const rest = new REST().setToken(token);
+  const rest = new REST().setToken(config.token);
   try {
     logger.info("Started refreshing application (/) commands.");
 
@@ -94,7 +104,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 client.on(Events.MessageCreate, async (message) => {
-    // Auto responses for common questions
+  // CARLBOT AUTORESPONSES -> HYPERBOT AUTORESPONSES.
     const imageRegex = /\b(?:send|upload|share|attach|post|submit|provide|drop)\s+(?:an?\s+)?(?:images?|photos?|pictures?|pics?|pix|screenshots?|snapshots?|files?|img(?:s|es)?|fotos?)\b/i;
     const questionRegex = /^(?:how|can|is|are|was|were|what|where|who|whom|whose|which|do|does|did|should|could|would|will|shall|has|have|had|must|am|why|when)\b/i;
     const reportRegex = /\b(?:how\s+(?:do|can|does)|where(?:\s+(?:can|do|to))?|what'?s?(?:\s+(?:the|way))?|can|is)\s+(?:i|we|one|you)\s+(?:report|file|make|submit|flag|notify)\s+(?:an?\s+)?(?:report|complaint|issue)?\s*(?:on|about|against|for)?\s*(?:a|this|that|the)?\s*(?:player|user|cheater|hacker|scammer|offender|abuser|violator|toxic\s+player|someone)\b/i;
@@ -108,6 +118,11 @@ client.on(Events.MessageCreate, async (message) => {
     if (questionRegex.test(message.content) && imageRegex.test(message.content)) {
         await message.reply("A user can only upload images in #general if they are:\n- Expert Ranked\n. If you do not have the Expert rank, you can upload images in any other channel if you have:\n- Level 3 in MEE6");
     }
+  // NOTES FOR DEPRECATION, dont need anything specific!
+  if (message.content.startsWith("-verify") || message.content.startsWith("-reverify")) {
+    await message.reply("Please use </verify:1355183171511128333> from now on. Any commands starting with `-` is deprecated in favor of **Slash Commands**. Find your equivalent commands by using our </help:1355183171364458720> command!")
+  }
+
 // ANYTHING AFTER THIS LINE IS RELATED TO CONTESTS.
   const contestCreationsId = "1353535051626844201";
   const contestSubmissionsId = "1353572359340294266";
@@ -147,6 +162,25 @@ client.on(Events.MessageCreate, async (message) => {
 });
 
 client.on(Events.GuildMemberRemove, async (member) => {
+  const channel = member.guild.channels.cache.get("1352877273094819962");
+  if (!channel?.isTextBased() || !channel?.isSendable()) return;
+
+  try {
+    const auditLogs = await member.guild.fetchAuditLogs({
+      type: AuditLogEvent.MemberBanAdd,
+      limit: 1,
+    });
+
+    const latestBan = auditLogs.entries.first();
+    if (latestBan && latestBan.target && latestBan.target.id === member.user.id) {
+      await channel.send({
+        content: `🔨 **${member.user.username}**`,
+        files: ['./jail.mp4']
+      });
+    }
+  } catch (error) {
+    console.error("Failed to check ban status:", error);
+  }
   try {
     const database = mongoClient.db("HyperVerify");
     const collection = database.collection("verifiedUsers");
@@ -221,7 +255,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
         );
       }
 
-      let username = await noblox.getUsernameFromId(user["robloxId"]);
+      const username = await noblox.getUsernameFromId(user["robloxId"]);
       await member.setNickname(username);
 
       logger.debug(
@@ -240,7 +274,23 @@ client.on(Events.GuildMemberAdd, async (member) => {
   }
 });
 
+
 client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isAutocomplete()) {
+    const focusedOption = interaction.options.getFocused(true);
+    let choices: string[] = [];
+
+    if (focusedOption.name === "timezone") {
+        choices = validTimezones
+            .filter(tz => tz.toLowerCase().includes(focusedOption.value.toLowerCase())) // Keep all matches
+            .slice(0, 25);
+    }
+
+    // Respond with the best-matching choices
+    await interaction.respond(choices.map(choice => ({ name: choice, value: choice })));
+}
+
+
   if (!interaction.isChatInputCommand()) return;
   const { cooldowns } = interaction.client as ExtendedClient;
 
@@ -248,7 +298,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!command) return;
 
   if (!cooldowns.has(command.data.name)) {
-    cooldowns.set(command.data.name, new Collection());
+      cooldowns.set(command.data.name, new Collection());
   }
 
   const now = Date.now();
@@ -257,56 +307,52 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const cooldownAmount = (command.cooldown ?? defaultCooldownDuration) * 1_000;
 
   if (timestamps.has(interaction.user.id)) {
-    const expirationTime = timestamps.get(interaction.user.id) + cooldownAmount;
+      const expirationTime = timestamps.get(interaction.user.id) + cooldownAmount;
 
-    if (now < expirationTime) {
-      const expiredTimestamp = Math.round(expirationTime / 1_000);
-      // check if a message has been sent already
-      if (!interaction.replied) {
-        await interaction.reply({
-          content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-        })
-      } else {
-        await interaction.editReply({
-          content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-        });
+      if (now < expirationTime) {
+          const expiredTimestamp = Math.round(expirationTime / 1_000);
+          if (!interaction.replied) {
+              await interaction.reply({
+                  content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+              });
+          } else {
+              await interaction.editReply({
+                  content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+              });
+          }
+          return;
       }
-    }
   }
 
   timestamps.set(interaction.user.id, now);
   setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
 
   if (!command) {
-    logger.error(`No command matching ${interaction.commandName} was found.`);
-    return;
+      logger.error(`No command matching ${interaction.commandName} was found.`);
+      return;
   }
-  if (interaction) {
-    try {
+
+  try {
       await command.execute(interaction);
-    } catch (error) {
+  } catch (error) {
       logger.error(error);
+      const errorMessage = "There was an error while executing this command!";
       if (interaction.replied || interaction.deferred) {
-        await interaction.reply({
-          content: "There was an error while executing this command!",
-          flags: MessageFlags.Ephemeral,
-        });
+          await interaction.editReply({ content: errorMessage });
       } else {
-        await interaction.reply({
-          content: "There was an error while executing this command!",
-          flags: MessageFlags.Ephemeral,
-        });
+          await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
       }
-    }
   }
 });
+
+
 
 client.on(Events.Error, (error) => {
   logger.error(error);
 });
 
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
-  const hofVotingChannelId = "1353627970962722877";
+  const hofVotingChannelId = config.channels.hallOfFame.hofVotingChannelId;
   if (reaction.message.channel.id === hofVotingChannelId) {
     if (reaction.emoji.name === "👍") {
       const channel = reaction.message.channel;
@@ -316,8 +362,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
         const upvotes = reactions.get("👍")?.count || 0;
         const downvotes = reactions.get("👎")?.count || 0;
         if (upvotes - downvotes >= 8) {
-          const hofChannelId = "1353627930026311681";
-          const hofChannel = message.guild?.channels.cache.get(hofChannelId);
+          const hofChannel = message.guild?.channels.cache.get(config.channels.hallOfFame.hofChannelId);
           if (!message.author) return;
           const images = message.attachments.map(
             (attachment) => attachment.url,
@@ -341,4 +386,4 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   }
 });
 
-client.login(token);
+client.login(config.token);

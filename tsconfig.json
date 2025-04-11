@@ -16,6 +16,6 @@
     "strictFunctionTypes": true,
     "noImplicitOverride": true
   },
-  "include": ["**/*.ts", "**/*.json"],
+  "include": ["**/*.ts", "**/*.json", "**/*.mp4"],
   "exclude": ["node_modules", "dist"]
 }
